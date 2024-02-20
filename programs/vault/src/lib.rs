@@ -44,7 +44,7 @@ use crate::external::spl_token::{
   TokenAccount,
 };
 
-declare_id!("3xXXU3voj5qdHoLD5tDaboAfwyzz2hgEB5CbP6grTFwR");
+declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
 
 #[program]
 mod coin98_vault {
