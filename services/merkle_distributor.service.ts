@@ -22,6 +22,7 @@ const LEVEL_ARRAY = [
 
 export interface Schedule {
   index: number;
+  timestamp: BN;
   address: PublicKey;
   sendingAmount: BN;
   receivingAmount: BN;
@@ -29,6 +30,7 @@ export interface Schedule {
 
 const ScheduleLayout: borsh.Layout<Schedule> = borsh.struct([
   borsh.u16('index'),
+  borsh.i64('timestamp'),
   borsh.publicKey('address'),
   borsh.u64('receivingAmount'),
   borsh.u64('sendingAmount'),
