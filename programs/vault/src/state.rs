@@ -14,7 +14,6 @@ pub struct Schedule {
   pub nonce: u8,
   pub event_id: u64,
   pub vault_id: Pubkey,
-  pub timestamp: i64,
   pub merkle_root: Vec<u8>,
   // receiving_token: Type of the token user will redeem
   pub receiving_token_mint: Pubkey,
@@ -50,6 +49,7 @@ impl Vault {
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct RedemptionParams {
   pub index: u16,
+  pub timestamp: i64,
   pub address: Pubkey,
   pub receiving_amount: u64,
   pub sending_amount: u64,
@@ -58,6 +58,7 @@ pub struct RedemptionParams {
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct RedemptionMultiParams {
   pub index: u16,
+  pub timestamp: i64,
   pub address: Pubkey,
   pub receiving_token_mint: Pubkey,
   pub receiving_amount: u64,

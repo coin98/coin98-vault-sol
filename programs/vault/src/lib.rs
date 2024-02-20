@@ -44,7 +44,7 @@ use crate::external::spl_token::{
   TokenAccount,
 };
 
-declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+declare_id!("3xXXU3voj5qdHoLD5tDaboAfwyzz2hgEB5CbP6grTFwR");
 
 #[program]
 mod coin98_vault {
@@ -92,7 +92,6 @@ mod coin98_vault {
     ctx: Context<CreateScheduleContext>,
     user_count: u16,
     event_id: u64,
-    timestamp: i64,
     merkle_root: [u8; 32],
     use_multi_token: bool,
     receiving_token_mint: Pubkey,
@@ -109,7 +108,6 @@ mod coin98_vault {
     schedule.nonce = *ctx.bumps.get("schedule").unwrap();
     schedule.event_id = event_id;
     schedule.vault_id = vault.key();
-    schedule.timestamp = timestamp;
     schedule.merkle_root = merkle_root.try_to_vec().unwrap();
     schedule.receiving_token_mint = receiving_token_mint;
     schedule.receiving_token_account = receiving_token_account;
@@ -192,6 +190,7 @@ mod coin98_vault {
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
   #[access_control(verify_proof(
     index,
+    timestamp,
     &ctx.accounts.user.key,
     receiving_amount,
     sending_amount,
@@ -201,6 +200,7 @@ mod coin98_vault {
   pub fn redeem_token<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenContext<'a>>,
     index: u16,
+    timestamp: i64,
     proofs: Vec<[u8; 32]>,
     receiving_amount: u64,
     sending_amount: u64,
@@ -211,10 +211,12 @@ mod coin98_vault {
     let vault_signer = &ctx.accounts.vault_signer;
     let vault_token0 = &ctx.accounts.vault_token0;
     let user_token0 = &ctx.accounts.user_token0;
+    let clock = Clock::get().unwrap();
 
     let schedule = &mut ctx.accounts.schedule;
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
+    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
 
     if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
       let accounts = &ctx.remaining_accounts;
@@ -252,6 +254,7 @@ mod coin98_vault {
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
   #[access_control(verify_proof_multi(
     index,
+    timestamp,
     &ctx.accounts.user.key,
     receiving_token_mint,
     receiving_amount,
@@ -262,11 +265,13 @@ mod coin98_vault {
   pub fn redeem_token_multi<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenMultiContext<'a>>,
     index: u16,
+    timestamp: i64,
     proofs: Vec<[u8; 32]>,
     receiving_token_mint: Pubkey,
     receiving_amount: u64,
     sending_amount: u64,
   ) -> Result<()> {
+    let clock = Clock::get().unwrap();
 
     let vault = &ctx.accounts.vault;
     let vault_signer = &ctx.accounts.vault_signer;
@@ -278,6 +283,7 @@ mod coin98_vault {
 
     require_keys_eq!(vault_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
     require_keys_eq!(user_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
 
     let schedule = &mut ctx.accounts.schedule;
     let user_index: usize = index.into();
@@ -376,19 +382,16 @@ pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
-
-  let clock = Clock::get().unwrap();
-
   require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
   require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
-  require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
 
   Ok(())
 }
 
-pub fn verify_proof(index: u16, user: &Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
+pub fn verify_proof(index: u16, timestamp: i64, user: &Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
   let redemption_params = RedemptionParams {
     index: index,
+    timestamp,
     address: *user,
     receiving_amount: receiving_amount,
     sending_amount: sending_amount,
@@ -405,9 +408,10 @@ pub fn verify_proof(index: u16, user: &Pubkey, receiving_amount: u64, sending_am
   Ok(())
 }
 
-pub fn verify_proof_multi(index: u16, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
+pub fn verify_proof_multi(index: u16, timestamp: i64, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
   let redemption_params = RedemptionMultiParams {
     index: index,
+    timestamp,
     address: *user,
     receiving_token_mint: receiving_token_mint,
     receiving_amount: receiving_amount,
