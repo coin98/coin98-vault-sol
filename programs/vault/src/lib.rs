@@ -218,7 +218,12 @@ mod coin98_vault {
     let schedule = &mut ctx.accounts.schedule;
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
-    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+
+    if schedule.timestamp > 0 {
+      require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
+    } else {
+      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+    }
 
     if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
       let accounts = &ctx.remaining_accounts;
@@ -384,13 +389,8 @@ pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
-  let clock = Clock::get().unwrap();
-
   require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
   require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
-  if schedule.timestamp > 0 {
-    require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
-  }
 
   Ok(())
 }
