@@ -14,6 +14,7 @@ pub struct Schedule {
   pub nonce: u8,
   pub event_id: u64,
   pub vault_id: Pubkey,
+  pub timestamp: i64,
   pub merkle_root: Vec<u8>,
   // receiving_token: Type of the token user will redeem
   pub receiving_token_mint: Pubkey,

@@ -92,6 +92,7 @@ mod coin98_vault {
     ctx: Context<CreateScheduleContext>,
     user_count: u16,
     event_id: u64,
+    timestamp: i64,
     merkle_root: [u8; 32],
     use_multi_token: bool,
     receiving_token_mint: Pubkey,
@@ -108,6 +109,7 @@ mod coin98_vault {
     schedule.nonce = *ctx.bumps.get("schedule").unwrap();
     schedule.event_id = event_id;
     schedule.vault_id = vault.key();
+    schedule.timestamp = timestamp;
     schedule.merkle_root = merkle_root.try_to_vec().unwrap();
     schedule.receiving_token_mint = receiving_token_mint;
     schedule.receiving_token_account = receiving_token_account;
@@ -382,8 +384,13 @@ pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
+  let clock = Clock::get().unwrap();
+
   require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
   require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
+  if schedule.timestamp > 0 {
+    require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
+  }
 
   Ok(())
 }
