@@ -290,11 +290,16 @@ mod coin98_vault {
 
     require_keys_eq!(vault_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
     require_keys_eq!(user_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
-    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
 
     let schedule = &mut ctx.accounts.schedule;
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
+
+    if schedule.timestamp > 0 {
+      require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
+    } else {
+      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+    }
 
     if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
       let accounts = &ctx.remaining_accounts;
