@@ -42,7 +42,6 @@ export class VaultService {
       payerAccount.publicKey,
       vaultAddress,
       vaultDerivationPath,
-      signerNonce,
       vaultProgramId,
     )
     transaction.add(createVaultInstruction)
@@ -220,6 +219,7 @@ export class VaultService {
     vaultAddress: PublicKey,
     scheduleAddress: PublicKey,
     index: number,
+    timestamp: BN,
     proofs: Buffer[],
     receivingAmount: BN,
     sendingAmount: BN,
@@ -243,6 +243,7 @@ export class VaultService {
       vaultAddress,
       scheduleAddress,
       index,
+      timestamp,
       proofs,
       receivingAmount,
       sendingAmount,

@@ -68,6 +68,7 @@ interface WithdrawTokenRequest {
 
 interface RedeemTokenRequest {
   index: number
+  timestamp: BN
   proofs: Buffer[]
   receivingAmount: BN
   sendingAmount: BN
@@ -297,6 +298,7 @@ export class VaultInstructionService {
     vaultAddress: PublicKey,
     scheduleAddress: PublicKey,
     index: number,
+    timestamp: BN,
     proofs: Buffer[],
     receivingAmount: BN,
     sendingAmount: BN,
@@ -311,6 +313,7 @@ export class VaultInstructionService {
 
     const request: RedeemTokenRequest = {
       index,
+      timestamp,
       proofs,
       receivingAmount,
       sendingAmount,

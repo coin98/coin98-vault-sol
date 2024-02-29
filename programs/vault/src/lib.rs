@@ -20,9 +20,9 @@ use std::{
   },
 };
 
-use crate::constant::{
+use crate::{constant::{
   SIGNER_SEED_1,
-};
+}, state::{RedemptionMultiParamsV2, RedemptionParams, RedemptionParamsV2}};
 use crate::context::*;
 use crate::error::{
   ErrorCode,
@@ -30,7 +30,6 @@ use crate::error::{
 use crate::state::{
   ObjType,
   RedemptionMultiParams,
-  RedemptionParams,
   Schedule,
   Vault,
 };
@@ -190,17 +189,10 @@ mod coin98_vault {
   }
 
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
-  #[access_control(verify_proof(
-    index,
-    &ctx.accounts.user.key,
-    receiving_amount,
-    sending_amount,
-    &proofs,
-    &ctx.accounts.schedule
-  ))]
   pub fn redeem_token<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenContext<'a>>,
     index: u16,
+    timestamp: i64,
     proofs: Vec<[u8; 32]>,
     receiving_amount: u64,
     sending_amount: u64,
@@ -211,8 +203,19 @@ mod coin98_vault {
     let vault_signer = &ctx.accounts.vault_signer;
     let vault_token0 = &ctx.accounts.vault_token0;
     let user_token0 = &ctx.accounts.user_token0;
+    let clock = Clock::get().unwrap();
 
     let schedule = &mut ctx.accounts.schedule;
+    if schedule.timestamp > 0 {
+      // older version of merkle node
+      require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
+      verify_proof(index, None, &ctx.accounts.user.key, receiving_amount, sending_amount, &proofs, &schedule)?;
+    } else {
+      // version 2 of merkle node
+      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+      verify_proof(index, Some(timestamp), &ctx.accounts.user.key, receiving_amount, sending_amount, &proofs, &schedule)?;
+    }
+
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
 
@@ -250,23 +253,16 @@ mod coin98_vault {
   }
 
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
-  #[access_control(verify_proof_multi(
-    index,
-    &ctx.accounts.user.key,
-    receiving_token_mint,
-    receiving_amount,
-    sending_amount,
-    &proofs,
-    &ctx.accounts.schedule
-  ))]
   pub fn redeem_token_multi<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenMultiContext<'a>>,
     index: u16,
+    timestamp: i64,
     proofs: Vec<[u8; 32]>,
     receiving_token_mint: Pubkey,
     receiving_amount: u64,
     sending_amount: u64,
   ) -> Result<()> {
+    let clock = Clock::get().unwrap();
 
     let vault = &ctx.accounts.vault;
     let vault_signer = &ctx.accounts.vault_signer;
@@ -280,6 +276,14 @@ mod coin98_vault {
     require_keys_eq!(user_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
 
     let schedule = &mut ctx.accounts.schedule;
+    if schedule.timestamp > 0 {
+      require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
+      verify_proof_multi(index, None, &ctx.accounts.user.key, receiving_token_mint, receiving_amount, sending_amount, &proofs, schedule)?;
+    } else {
+      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+      verify_proof_multi(index, Some(timestamp), &ctx.accounts.user.key, receiving_token_mint, receiving_amount, sending_amount, &proofs, schedule)?;
+    }
+
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
 
@@ -376,24 +380,37 @@ pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
-
-  let clock = Clock::get().unwrap();
-
   require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
   require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
-  require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
 
   Ok(())
 }
 
-pub fn verify_proof(index: u16, user: &Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
-  let redemption_params = RedemptionParams {
-    index: index,
-    address: *user,
-    receiving_amount: receiving_amount,
-    sending_amount: sending_amount,
+pub fn verify_proof(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
+  let redemption_data = match timestamp {
+    Some(timestamp) => { // if timestamp field exists on merkle node
+      msg!("Vault V2");
+      let redemption_params = RedemptionParamsV2 {
+        index: index,
+        timestamp,
+        address: *user,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    },
+    None => { // older version of merkle node
+      msg!("Old version vault");
+      let redemption_params = RedemptionParams {
+        index: index,
+        address: *user,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    }
   };
-  let redemption_data = redemption_params.try_to_vec().unwrap();
+
   let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
   let leaf = hash(&redemption_data[..]);
   let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
@@ -405,15 +422,31 @@ pub fn verify_proof(index: u16, user: &Pubkey, receiving_amount: u64, sending_am
   Ok(())
 }
 
-pub fn verify_proof_multi(index: u16, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
-  let redemption_params = RedemptionMultiParams {
-    index: index,
-    address: *user,
-    receiving_token_mint: receiving_token_mint,
-    receiving_amount: receiving_amount,
-    sending_amount: sending_amount,
+pub fn verify_proof_multi(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
+  let redemption_data = match timestamp {
+    Some(timestamp) => { // newer version if timestamp field exists on merkle node
+      let redemption_params = RedemptionMultiParamsV2 {
+        index: index,
+        timestamp,
+        address: *user,
+        receiving_token_mint: receiving_token_mint,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    },
+    None => { // older version of merkle node
+      let redemption_params = RedemptionMultiParams {
+        index: index,
+        address: *user,
+        receiving_token_mint: receiving_token_mint,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    }
   };
-  let redemption_data = redemption_params.try_to_vec().unwrap();
+
   let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
   let leaf = hash(&redemption_data[..]);
   let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
