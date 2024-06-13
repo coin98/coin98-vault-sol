@@ -43,7 +43,7 @@ use crate::external::spl_token::{
   TokenAccount,
 };
 
-declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+declare_id!("DoTKuiZ83BoVh54ycM3en2ykhjsud1P67Eiqg7q14Qo2");
 
 #[program]
 mod coin98_vault {
@@ -105,7 +105,7 @@ mod coin98_vault {
     let schedule = &mut ctx.accounts.schedule;
 
     schedule.obj_type = if use_multi_token { ObjType::DistributionMulti } else { ObjType::Distribution };
-    schedule.nonce = *ctx.bumps.get("schedule").unwrap();
+    schedule.nonce = ctx.bumps.schedule;
     schedule.event_id = event_id;
     schedule.vault_id = vault.key();
     schedule.timestamp = timestamp;

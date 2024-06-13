@@ -9,7 +9,7 @@ import { MerkleDistributionService, OldMerkleDistributionService } from "../serv
 import { MerkleTree, SolanaService, TokenProgramService } from "@coin98/solana-support-library";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const PROGRAM_ID = new PublicKey("CfM6SDyyHxi8C76jT1i74p7znPEL6cLmkgBD8sgf9k1U");
+const PROGRAM_ID = new PublicKey("DoTKuiZ83BoVh54ycM3en2ykhjsud1P67Eiqg7q14Qo2");
 
 let payer: Keypair;
 let vaultName: string;
@@ -30,20 +30,20 @@ describe("Vault", () => {
     await connection.requestAirdrop(user.publicKey, 1000000000);
     vaultName = (Math.random() + 1).toString(36).substring(7);
     sendingTokenMint = await TokenProgramService.createTokenMint(
-      connection,
-      payer,
-      Keypair.generate(),
-      8,
-      payer.publicKey,
-      PROGRAM_ID
+        connection,
+        payer,
+        Keypair.generate(),
+        8,
+        payer.publicKey,
+        PROGRAM_ID
     );
     receivingTokenMint = await TokenProgramService.createTokenMint(
-      connection,
-      payer,
-      Keypair.generate(),
-      8,
-      payer.publicKey,
-      PROGRAM_ID
+        connection,
+        payer,
+        Keypair.generate(),
+        8,
+        payer.publicKey,
+        PROGRAM_ID
     );
   });
 
