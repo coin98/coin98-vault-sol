@@ -20,5 +20,23 @@ pub enum ErrorCode {
 
   #[msg("Coin98Vault: Unauthorized.")]
   Unauthorized,
+
+  #[msg("Coin98Vault: Invalid schedule type.")]
+  InvalidScheduleType,
+
+  #[msg("Coin98Vault: Invalid mint account")]
+  InvalidMintAccount,
+
+  #[msg("Coin98Vault: Invalid token amount")]
+  InvalidTokenAmount,
+
+  #[msg("Coin98Vault: Invalid metadata")]
+  InvalidMetadata,
+
+  #[msg("Coin98Vault: NFT collection mismatch.")]
+  InvalidCollection,
+
+  #[msg("Coin98Vault: Invalid proof")]
+  InvalidProof,
 }
 

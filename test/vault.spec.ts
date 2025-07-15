@@ -6,10 +6,10 @@ import { BN } from "bn.js";
 import "./util";
 import { currentTime } from "./util";
 import { MerkleDistributionService, OldMerkleDistributionService } from "../services/merkle_distributor.service";
-import { MerkleTree, SolanaService, TokenProgramService } from "@coin98/solana-support-library";
+import { MerkleTree, TokenProgramService } from "@coin98/solana-support-library";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const PROGRAM_ID = new PublicKey("CfM6SDyyHxi8C76jT1i74p7znPEL6cLmkgBD8sgf9k1U");
+const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 
 let payer: Keypair;
 let vaultName: string;
@@ -80,18 +80,18 @@ describe("Vault", () => {
     const vaultAuthority = vaultInfo.signer;
 
     const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      vaultAuthority,
-      sendingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        vaultAuthority,
+        sendingTokenMint.publicKey
+      );
 
     const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      vaultAuthority,
-      receivingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        vaultAuthority,
+        receivingTokenMint.publicKey
+      );
 
     await TokenProgramService.mint(
       connection,
@@ -109,7 +109,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      false,
+      new BN(0),
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -126,11 +126,11 @@ describe("Vault", () => {
   it("Redeem token", async () => {
     const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      user.publicKey,
-      receivingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        user.publicKey,
+        receivingTokenMint.publicKey
+      );
 
     await VaultService.redeem(
       connection,
@@ -153,18 +153,18 @@ describe("Vault", () => {
     const vaultAuthority = vaultInfo.signer;
 
     const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      vaultAuthority,
-      sendingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        vaultAuthority,
+        sendingTokenMint.publicKey
+      );
 
     const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      vaultAuthority,
-      receivingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        vaultAuthority,
+        receivingTokenMint.publicKey
+      );
 
     await TokenProgramService.mint(
       connection,
@@ -197,7 +197,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(snapshot),
       oldVersionTree.root().hash,
-      false,
+      new BN(0),
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -209,11 +209,11 @@ describe("Vault", () => {
   it("Redeem token with old version schedule", async () => {
     const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 1).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      user.publicKey,
-      receivingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        user.publicKey,
+        receivingTokenMint.publicKey
+      );
 
     await VaultService.redeem(
       connection,

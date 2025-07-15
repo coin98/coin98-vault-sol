@@ -1,20 +1,17 @@
 import {
   BorshService,
   HashService,
-  TOKEN_PROGRAM_ID
-} from '@coin98/solana-support-library';
-import {
-  BorshCoder,
-  Idl
-} from "@project-serum/anchor";
-import * as borsh from '@project-serum/borsh';
+  TOKEN_PROGRAM_ID,
+} from "@coin98/solana-support-library";
+import { BorshCoder, Idl } from "@project-serum/anchor";
+import * as borsh from "@project-serum/borsh";
 import {
   AccountMeta,
   PublicKey,
   SystemProgram,
-  TransactionInstruction
-} from '@solana/web3.js';
-import BN from 'bn.js';
+  TransactionInstruction,
+} from "@solana/web3.js";
+import BN from "bn.js";
 import VaultIdl from "../target/idl/coin98_vault.json";
 
 const coder = new BorshCoder(VaultIdl as Idl)
@@ -23,8 +20,9 @@ export enum ObjType {
   Vault = 1,
   Distribution = 2,
   DistributionMulti = 3,
+  NFTDistribution = 4,
+  NFTCollectionDistribution = 5,
 }
-
 
 interface ScheduleDerivationPath {
   eventId: BN
@@ -46,8 +44,8 @@ interface CreateScheduleRequest {
   userCount: number
   eventId: BN
   timestamp: BN
-  merkleRoot: Buffer
-  useMultiToken: boolean
+  merkleRoot: number[]
+  scheduleType: number
   receivingTokenMint: PublicKey
   receivingTokenAccount: PublicKey
   sendingTokenMint: PublicKey
@@ -86,7 +84,26 @@ interface TransferOwnershipRequest {
   newOwner: PublicKey
 }
 
-interface AcceptOwnershipRequest {
+interface AcceptOwnershipRequest {}
+
+interface RedeemTokenNFTRequest {
+  index: number;
+  timestamp: BN;
+  nftMint: PublicKey;
+  nftCollection: PublicKey;
+  receivingAmount: BN;
+  sendingAmount: BN;
+  proofs: Buffer[];
+}
+
+interface RedeemTokenNFTCollectionRequest {
+  index: number;
+  timestamp: BN;
+  nftMint: PublicKey;
+  nftCollection: PublicKey;
+  receivingAmount: BN;
+  sendingAmount: BN;
+  proofs: Buffer[];
 }
 
 export interface Vault {
@@ -173,7 +190,7 @@ export class VaultInstructionService {
     eventId: BN,
     timestamp: BN,
     merkleRoot: Buffer,
-    useMultiToken: boolean,
+    scheduleType: BN,
     receivingTokenMintAddress: PublicKey,
     receivingTokenAccountAddress: PublicKey,
     sendingTokenMintAddress: PublicKey,
@@ -183,10 +200,10 @@ export class VaultInstructionService {
 
     const request: CreateScheduleRequest = {
       userCount,
-      eventId,
-      timestamp,
-      merkleRoot,
-      useMultiToken,
+      eventId: eventId,
+      timestamp: timestamp,
+      merkleRoot: Array.from(merkleRoot),
+      scheduleType: scheduleType.toNumber(),
       receivingTokenMint: receivingTokenMintAddress,
       receivingTokenAccount: receivingTokenAccountAddress,
       sendingTokenMint: sendingTokenMintAddress,
@@ -524,5 +541,139 @@ export class VaultInstructionService {
       ],
       vaultProgramId,
     )
+  }
+
+  static redeemTokenNFT(
+    vaultAddress: PublicKey,
+    scheduleAddress: PublicKey,
+    index: number,
+    timestamp: BN,
+    proofs: Buffer[],
+    nftMint: PublicKey,
+    collectionMint: PublicKey,
+    receivingAmount: BN,
+    sendingAmount: BN,
+    vaultSignerAddress: PublicKey,
+    vaultVestingTokenAddress: PublicKey,
+    vaultFeeTokenAddress: null | PublicKey,
+    userAddress: PublicKey,
+    userVestingTokenAddress: PublicKey,
+    userFeeTokenAddress: null | PublicKey,
+    userNFTTokenAddress: PublicKey,
+    nftMetadataAddress: PublicKey,
+    vaultProgramId: PublicKey
+  ): TransactionInstruction {
+    const request: RedeemTokenNFTRequest = {
+      index,
+      timestamp,
+      nftMint,
+      nftCollection: collectionMint, // Use nftCollection to match IDL
+      receivingAmount,
+      sendingAmount,
+      proofs,
+    };
+    const data = coder.instruction.encode("redeemTokenNft", request);
+
+    let extraAccounts: AccountMeta[] = [];
+    if (vaultFeeTokenAddress != null) {
+      extraAccounts.push({
+        pubkey: vaultFeeTokenAddress,
+        isSigner: false,
+        isWritable: true,
+      });
+    }
+    if (userFeeTokenAddress != null) {
+      extraAccounts.push({
+        pubkey: userFeeTokenAddress,
+        isSigner: false,
+        isWritable: true,
+      });
+    }
+
+    const keys: AccountMeta[] = [
+      { pubkey: vaultAddress, isSigner: false, isWritable: false },
+      { pubkey: scheduleAddress, isSigner: false, isWritable: true },
+      { pubkey: vaultSignerAddress, isSigner: false, isWritable: false },
+      { pubkey: vaultVestingTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: userAddress, isSigner: true, isWritable: false },
+      { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: userNFTTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: nftMetadataAddress, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ...extraAccounts,
+    ];
+
+    return new TransactionInstruction({
+      data,
+      keys,
+      programId: vaultProgramId,
+    });
+  }
+
+  static redeemTokenNFTCollection(
+    vaultAddress: PublicKey,
+    scheduleAddress: PublicKey,
+    index: number,
+    timestamp: BN,
+    proofs: Buffer[],
+    nftMint: PublicKey,
+    nftCollection: PublicKey,
+    receivingAmount: BN,
+    sendingAmount: BN,
+    vaultSignerAddress: PublicKey,
+    vaultVestingTokenAddress: PublicKey,
+    vaultFeeTokenAddress: null | PublicKey,
+    userAddress: PublicKey,
+    userVestingTokenAddress: PublicKey,
+    userFeeTokenAddress: null | PublicKey,
+    userNFTTokenAddress: PublicKey,
+    nftMetadataAddress: PublicKey,
+    vaultProgramId: PublicKey
+  ): TransactionInstruction {
+    const request: RedeemTokenNFTCollectionRequest = {
+      index,
+      timestamp,
+      proofs,
+      nftMint,
+      nftCollection,
+      receivingAmount,
+      sendingAmount,
+    };
+    const data = coder.instruction.encode("redeemTokenNftCollection", request);
+
+    let extraAccounts: AccountMeta[] = [];
+    if (vaultFeeTokenAddress != null) {
+      extraAccounts.push({
+        pubkey: vaultFeeTokenAddress,
+        isSigner: false,
+        isWritable: true,
+      });
+    }
+    if (userFeeTokenAddress != null) {
+      extraAccounts.push({
+        pubkey: userFeeTokenAddress,
+        isSigner: false,
+        isWritable: true,
+      });
+    }
+
+    const keys: AccountMeta[] = [
+      { pubkey: vaultAddress, isSigner: false, isWritable: false },
+      { pubkey: scheduleAddress, isSigner: false, isWritable: true },
+      { pubkey: vaultSignerAddress, isSigner: false, isWritable: false },
+      { pubkey: vaultVestingTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: userAddress, isSigner: true, isWritable: false },
+      { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: userNFTTokenAddress, isSigner: false, isWritable: true },
+      { pubkey: nftMetadataAddress, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ...extraAccounts,
+    ];
+
+    return new TransactionInstruction({
+      data,
+      keys,
+      programId: vaultProgramId,
+    });
   }
 }

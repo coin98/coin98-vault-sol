@@ -1,24 +1,26 @@
 import {
-  BorshService,
   HashService,
-  sendTransaction
-} from '@coin98/solana-support-library';
+  sendTransaction,
+  TokenProgramService,
+} from "@coin98/solana-support-library";
 import {
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
-  Transaction
-} from '@solana/web3.js';
-import BN from 'bn.js';
-import moment from 'moment';
+  Transaction,
+} from "@solana/web3.js";
+import BN from "bn.js";
+import moment from "moment";
 import {
   Schedule,
   Vault,
-  VaultInstructionService
-} from './vault_instruction.service';
+  VaultInstructionService,
+} from "./vault_instruction.service";
+import { NFTDiscoveryService } from "./nft_discovery.service";
+import { getMetadataAddress } from "../test/util";
 
 export class VaultService {
-
   static async createVault(
     connection: Connection,
     payerAccount: Keypair,
@@ -85,7 +87,7 @@ export class VaultService {
     eventId: BN,
     timestamp: BN,
     merkleRoot: Buffer,
-    useMultiToken: boolean,
+    scheduleType: BN,
     receivingTokenMintAddress: PublicKey,
     receivingTokenAccountAddress: PublicKey,
     sendingTokenMintAddress: PublicKey,
@@ -105,7 +107,7 @@ export class VaultService {
       eventId,
       timestamp,
       merkleRoot,
-      useMultiToken,
+      scheduleType,
       receivingTokenMintAddress,
       receivingTokenAccountAddress,
       sendingTokenMintAddress,
@@ -127,16 +129,16 @@ export class VaultService {
     vaultAddress: PublicKey,
     scheduleAddress: PublicKey,
     isActive: boolean,
-    vaultProgramId: PublicKey,
+    vaultProgramId: PublicKey
   ): Promise<void> {
 
     const transaction = new Transaction()
 
     const setScheduleStatusInstruction = VaultInstructionService.setScheduleStatus(
-      payerAccount.publicKey,
-      vaultAddress,
-      scheduleAddress,
-      isActive,
+        payerAccount.publicKey,
+        vaultAddress,
+        scheduleAddress,
+        isActive,
       vaultProgramId,
     )
     transaction.add(setScheduleStatusInstruction)
@@ -365,7 +367,7 @@ export class VaultService {
     vaultProgramId: PublicKey,
   ): [PublicKey, number] {
     const derivationPath = (typeof(params) === 'string')
-      ? this.findVaultDerivationPath(params)
+        ? this.findVaultDerivationPath(params)
       : params
     return VaultInstructionService.findVaultAddress(
       derivationPath,
@@ -431,4 +433,272 @@ export class VaultService {
     console.info(`Admins:    ${accountData.admins.map(x => { return `pubkey: ${x.toBase58()} --- ${x.toBuffer().toString('hex')}` }).join('\n           ')}`)
     console.info('')
   }
+
+static findMetadataAddress(
+    mint: PublicKey,
+    tokenMetadataProgramId: PublicKey
+  ): PublicKey {
+    const [address]: [PublicKey, number] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        tokenMetadataProgramId.toBytes(),
+        mint.toBytes(),
+      ],
+      tokenMetadataProgramId
+    );
+
+    return address;
+  }
+
+  /**
+   * Redeems tokens using specific NFT - matches lib.rs redeem_token_nft
+   * @param connection Solana connection
+   * @param payerAccount Payer account keypair
+   * @param vaultAddress Vault address
+   * @param scheduleAddress Schedule address
+   * @param index Index in merkle tree
+   * @param timestamp Timestamp for redemption
+   * @param nftMint NFT mint address
+   * @param nftCollection NFT collection address
+   * @param receivingAmount Amount to receive
+   * @param sendingAmount Amount to send as fee
+   * @param proofs Merkle proofs
+   * @param recipientAddress Recipient token account address
+   * @param feePaymentAddress Fee payment token account address
+   * @param vaultProgramId Vault program ID
+   */
+  static async redeemNFT(
+    connection: Connection,
+    payerAccount: Keypair,
+    vaultAddress: PublicKey,
+    scheduleAddress: PublicKey,
+    index: number,
+    timestamp: BN,
+    nftMint: PublicKey,
+    collectionMint: PublicKey,
+    receivingAmount: BN,
+    sendingAmount: BN,
+    proofs: Buffer[],
+    recipientAddress: PublicKey,
+    feePaymentAddress: PublicKey,
+    vaultProgramId: PublicKey
+  ): Promise<void> {
+    try {
+      console.log(
+        `Starting NFT redemption for user ${payerAccount.publicKey.toBase58()}, NFT ${nftMint.toBase58()}, collection ${collectionMint.toBase58()}, index ${index}`
+      );
+
+      // Get vault and schedule information
+      const [vault, schedule] = await Promise.all([
+        this.getVaultAccountInfo(connection, vaultAddress),
+        this.getScheduleAccountInfo(connection, scheduleAddress),
+      ]);
+
+      // Get user NFT token account and metadata address
+      const userNFTTokenAccount =
+        TokenProgramService.findAssociatedTokenAddress(
+          payerAccount.publicKey,
+          nftMint
+        );
+
+      console.log(`User NFT Token Account: ${userNFTTokenAccount.toBase58()}`);
+
+      const nftMetadataAddress = getMetadataAddress(nftMint);
+
+      console.log(`NFT Metadata Address: ${nftMetadataAddress.toBase58()}`);
+
+      console.log(`Creating NFT redemption transaction`);
+      const transaction = new Transaction();
+      transaction.add(
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000_000 })
+      );
+
+      const redeemInstruction = VaultInstructionService.redeemTokenNFT(
+        vaultAddress,
+        scheduleAddress,
+        index,
+        timestamp,
+        proofs,
+        nftMint,
+        collectionMint,
+        receivingAmount,
+        sendingAmount,
+        vault.signer,
+        schedule.receivingTokenAccount,
+        schedule.sendingTokenAccount,
+        payerAccount.publicKey,
+        recipientAddress,
+        feePaymentAddress,
+        userNFTTokenAccount,
+        nftMetadataAddress,
+        vaultProgramId
+      );
+      transaction.add(redeemInstruction);
+
+      const txSign = await sendTransaction(connection, transaction, [
+        payerAccount,
+      ]);
+
+      console.info(
+        `Successfully redeemed NFT token for user ${payerAccount.publicKey.toBase58()} in schedule ${scheduleAddress.toBase58()}`,
+        "---",
+        txSign,
+        "\n"
+      );
+    } catch (error) {
+      console.error(`NFT redemption failed:`, error);
+      throw new Error(`NFT redemption failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Redeems tokens using NFT from collection - matches lib.rs redeem_token_nft_collection
+   * @param connection Solana connection
+   * @param payerAccount Payer account keypair
+   * @param vaultAddress Vault address
+   * @param scheduleAddress Schedule address
+   * @param index Index in merkle tree
+   * @param timestamp Timestamp for redemption
+   * @param proofs Merkle proofs
+   * @param nftMint NFT mint address
+   * @param nftCollection NFT collection address
+   * @param receivingAmount Amount to receive
+   * @param sendingAmount Amount to send as fee
+   * @param recipientAddress Recipient token account address
+   * @param feePaymentAddress Fee payment token account address
+   * @param vaultProgramId Vault program ID
+   */
+  static async redeemNFTCollection(
+    connection: Connection,
+    payerAccount: Keypair,
+    vaultAddress: PublicKey,
+    scheduleAddress: PublicKey,
+    index: number,
+    timestamp: BN,
+    proofs: Buffer[],
+    nftMint: PublicKey,
+    nftCollection: PublicKey,
+    receivingAmount: BN,
+    sendingAmount: BN,
+    recipientAddress: PublicKey,
+    feePaymentAddress: PublicKey,
+    vaultProgramId: PublicKey
+  ): Promise<void> {
+    try {
+      console.log(
+        `Starting NFT collection redemption for user ${payerAccount.publicKey.toBase58()}, NFT ${nftMint.toBase58()}, collection ${nftCollection.toBase58()}, index ${index}`
+      );
+
+      // Get vault and schedule information
+      const [vault, schedule] = await Promise.all([
+        this.getVaultAccountInfo(connection, vaultAddress),
+        this.getScheduleAccountInfo(connection, scheduleAddress),
+      ]);
+
+      // Get user NFT token account and metadata address
+      const userNFTTokenAccount =
+        await NFTDiscoveryService.getUserNFTTokenAccount(
+          connection,
+          payerAccount.publicKey,
+          nftMint
+        );
+
+      if (!userNFTTokenAccount) {
+        throw new Error(
+          `User ${payerAccount.publicKey.toBase58()} does not own NFT ${nftMint.toBase58()}`
+        );
+      }
+
+      const nftMetadataAddress = await NFTDiscoveryService.getMetadataAddress(
+        nftMint
+      );
+
+      console.log(`Creating NFT collection redemption transaction`);
+      const transaction = new Transaction();
+      transaction.add(
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 })
+      );
+
+      const redeemInstruction =
+        VaultInstructionService.redeemTokenNFTCollection(
+          vaultAddress,
+          scheduleAddress,
+          index,
+          timestamp,
+          proofs,
+          nftMint,
+          receivingAmount,
+          sendingAmount,
+          vault.signer,
+          schedule.receivingTokenAccount,
+          schedule.sendingTokenAccount,
+          payerAccount.publicKey,
+          recipientAddress,
+          feePaymentAddress,
+          userNFTTokenAccount,
+          nftMetadataAddress,
+          vaultProgramId
+        );
+      transaction.add(redeemInstruction);
+
+      const txSign = await sendTransaction(connection, transaction, [
+        payerAccount,
+      ]);
+
+      console.info(
+        `Successfully redeemed NFT Collection token for user ${payerAccount.publicKey.toBase58()} in schedule ${scheduleAddress.toBase58()}`,
+        "---",
+        txSign,
+        "\n"
+      );
+    } catch (error) {
+      console.error(`NFT collection redemption failed:`, error);
+      throw new Error(`NFT collection redemption failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validates user's NFT eligibility for redemption
+   * @param connection Solana connection
+   * @param userAddress User's wallet address
+   * @param nftMint NFT mint address
+   * @param collectionKey Optional collection key for collection-based redemption
+   * @returns Promise of boolean indicating eligibility
+   */
+  static async validateNFTEligibility(
+    connection: Connection,
+    userAddress: PublicKey,
+    nftMint: PublicKey,
+    collectionKey?: PublicKey
+  ): Promise<boolean> {
+    try {
+      // Check if user owns the NFT
+      const ownsNFT = await NFTDiscoveryService.validateUserNFTOwnership(
+        connection,
+        userAddress,
+        nftMint
+      );
+
+      if (!ownsNFT) {
+        return false;
+      }
+
+      // If collection-based, validate collection membership
+      if (collectionKey) {
+        const collectionVerification =
+          await NFTDiscoveryService.validateNFTCollectionMembership(
+            connection,
+            nftMint,
+            collectionKey
+          );
+        return collectionVerification.isValid;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error validating NFT eligibility:", error);
+      return false;
+    }
+  }
+
 }
