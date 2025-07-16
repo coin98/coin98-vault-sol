@@ -199,6 +199,8 @@ mod coin98_vault {
 
     let vault = &ctx.accounts.vault;
     let vault_signer = &ctx.accounts.vault_signer;
+    let accounts = &ctx.remaining_accounts;
+    let user = &ctx.accounts.user;
     let vault_token0 = &ctx.accounts.vault_token0;
     let user_token0 = &ctx.accounts.user_token0;
     let clock = Clock::get().unwrap();
@@ -217,35 +219,17 @@ mod coin98_vault {
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
 
-    if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-      let accounts = &ctx.remaining_accounts;
-      let user = &ctx.accounts.user;
-      let vault_token1 = &accounts[0];
-      require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
-      let user_token1 = &accounts[1];
-      transfer_token(
-          &user,
-          &user_token1,
-          &vault_token1,
-          sending_amount,
-          &[]
-        )
-        .expect("Coin98Vault: CPI failed.");
-    }
-
     let seeds: &[&[_]] = &[
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
       &[vault.signer_nonce],
     ];
-    transfer_token(
-        &vault_signer,
-        &vault_token0,
-        &user_token0,
-        receiving_amount,
-        &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+    let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
+
+    // Verify the result of sending token
+    if result.is_err() {
+      return Err(ErrorCode::SendingTokenFailed.into());
+    }
 
     Ok(())
   }
@@ -264,14 +248,15 @@ mod coin98_vault {
 
     let vault = &ctx.accounts.vault;
     let vault_signer = &ctx.accounts.vault_signer;
-
+    let accounts = &ctx.remaining_accounts;
+    let user = &ctx.accounts.user;
     let vault_token0 = &ctx.accounts.vault_token0;
-    let vault_token0 = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
+    let vault_token0_token_account = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
     let user_token0 = &ctx.accounts.user_token0;
-    let user_token0 = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
+    let user_token0_token_account = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
 
-    require_keys_eq!(vault_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
-    require_keys_eq!(user_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+    require_keys_eq!(vault_token0_token_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+    require_keys_eq!(user_token0_token_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
 
     let schedule = &mut ctx.accounts.schedule;
     if schedule.timestamp > 0 {
@@ -285,37 +270,17 @@ mod coin98_vault {
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
 
-    if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-      let accounts = &ctx.remaining_accounts;
-      let user = &ctx.accounts.user;
-      let vault_token1 = &accounts[0];
-      require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
-      let user_token1 = &accounts[1];
-      transfer_token(
-          &user,
-          &user_token1,
-          &vault_token1,
-          sending_amount,
-          &[]
-        )
-        .expect("Coin98Vault: CPI failed.");
-    }
-
-    let vault_token0 = &ctx.accounts.vault_token0;
-    let user_token0 = &ctx.accounts.user_token0;
     let seeds: &[&[_]] = &[
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
       &[vault.signer_nonce],
     ];
-    transfer_token(
-        &vault_signer,
-        &vault_token0,
-        &user_token0,
-        receiving_amount,
-        &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+    let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
+
+    // Verify the result of sending token
+    if result.is_err() {
+      return Err(ErrorCode::SendingTokenFailed.into());
+    }
 
     Ok(())
   }
@@ -340,6 +305,7 @@ mod coin98_vault {
     let user_nft_token_account = &ctx.accounts.user_nft_token_account;
     let nft_metadata_account = &ctx.accounts.nft_metadata_account;
     let schedule = &mut ctx.accounts.schedule;
+    let accounts = &ctx.remaining_accounts;
     let clock = Clock::get().unwrap();
 
     // Verify NFT ownership
@@ -366,155 +332,116 @@ mod coin98_vault {
     )?;
 
     let user_index: usize = index.into();
-    require!(
-      schedule.redemptions[user_index] == false,
-      ErrorCode::Redeemed
-    );
+    require!( schedule.redemptions[user_index] == false, ErrorCode::Redeemed );
 
     schedule.redemptions[user_index] = true;
 
-    // Handle sending token if required
-    if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-        let accounts = &ctx.remaining_accounts;
-        let user = &ctx.accounts.user;
-        let vault_token1 = &accounts[0];
-        require_keys_eq!(
-            *vault_token1.key,
-            schedule.sending_token_account,
-            ErrorCode::InvalidAccount
-        );
-        let user_token1 = &accounts[1];
-        transfer_token(&user, &user_token1, &vault_token1, sending_amount, &[])
-            .expect("Coin98Vault: CPI failed.");
-    }
-
-    // Transfer receiving token to user
     let seeds: &[&[_]] = &[
         &SIGNER_SEED_1,
         vault.to_account_info().key.as_ref(),
         &[vault.signer_nonce],
     ];
-    transfer_token(
-        &vault_signer,
-        &vault_token0,
-        &user_token0,
-        receiving_amount,
-        &[&seeds],
-    )
-    .expect("Coin98Vault: CPI failed.");
+    let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
+
+    // Verify the result of sending token
+    if result.is_err() {
+      return Err(ErrorCode::SendingTokenFailed.into());
+    }
 
     Ok(())
   }
 
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::NFTCollectionDistribution))]
   pub fn redeem_token_nft_collection<'a>(
-      ctx: Context<'_, '_, '_, 'a, RedeemTokenNFTCollectionContext<'a>>,
-      index: u16,
-      timestamp: i64,
-      nft_mint: Pubkey,
-      nft_collection: Pubkey,
-      receiving_amount: u64,
-      sending_amount: u64,
-      proofs: Vec<[u8; 32]>,
+    ctx: Context<'_, '_, '_, 'a, RedeemTokenNFTCollectionContext<'a>>,
+    index: u16,
+    timestamp: i64,
+    nft_mint: Pubkey,
+    nft_collection: Pubkey,
+    receiving_amount: u64,
+    sending_amount: u64,
+    proofs: Vec<[u8; 32]>,
   ) -> Result<()> {
-      msg!("Coin98Vault: Instruction_RedeemTokenNFTCollection");
-      let user = &ctx.accounts.user;
-      let vault = &ctx.accounts.vault;
-      let vault_signer = &ctx.accounts.vault_signer;
-      let vault_token0 = &ctx.accounts.vault_token0;
-      let user_token0 = &ctx.accounts.user_token0;
-      let user_nft_token_account = &ctx.accounts.user_nft_token_account;
-      let nft_metadata_account = &ctx.accounts.nft_metadata_account;
-      let redeem_index = &mut ctx.accounts.redeem_index;
-      let schedule = &mut ctx.accounts.schedule;
-      let clock = Clock::get().unwrap();
+    msg!("Coin98Vault: Instruction_RedeemTokenNFTCollection");
+    let user = &ctx.accounts.user;
+    let vault = &ctx.accounts.vault;
+    let vault_signer = &ctx.accounts.vault_signer;
+    let vault_token0 = &ctx.accounts.vault_token0;
+    let user_token0 = &ctx.accounts.user_token0;
+    let user_nft_token_account = &ctx.accounts.user_nft_token_account;
+    let nft_metadata_account = &ctx.accounts.nft_metadata_account;
+    let redeem_index = &mut ctx.accounts.redeem_index;
+    let schedule = &mut ctx.accounts.schedule;
+    let accounts = &ctx.remaining_accounts;
+    let clock = Clock::get().unwrap();
 
-      // Verify NFT ownership and collection
-      verify_nft_ownership_and_collection(
-          &user.key,
-          &nft_mint,
-          &nft_collection,
-          user_nft_token_account,
-          nft_metadata_account,
-      )?;
+    // Verify NFT ownership and collection
+    verify_nft_ownership_and_collection(
+      &user.key,
+      &nft_mint,
+      &nft_collection,
+      user_nft_token_account,
+      nft_metadata_account,
+    )?;
 
-      // Verify merkle proof
-      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
-      verify_proof_nft_collection(
-          "collection".to_string(),
-          index,
-          timestamp,
-          &SYSTEM_PROGRAM_ID,
-          &nft_collection,
-          receiving_amount,
-          sending_amount,
-          &proofs,
-          &schedule,
-      )?;
+    // Verify merkle proof
+    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+    verify_proof_nft_collection(
+      "collection".to_string(),
+      index,
+      timestamp,
+      &SYSTEM_PROGRAM_ID,
+      &nft_collection,
+      receiving_amount,
+      sending_amount,
+      &proofs,
+      &schedule,
+    )?;
 
-      if redeem_index.is_redeemed {
-          return Err(ErrorCode::Redeemed.into());
-      } else {
-          redeem_index.is_redeemed = true;
-      }
+    if redeem_index.is_redeemed {
+        return Err(ErrorCode::Redeemed.into());
+    } else {
+        redeem_index.is_redeemed = true;
+    }
 
-      // Handle sending token if required
-      if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-          let accounts = &ctx.remaining_accounts;
-          let user = &ctx.accounts.user;
-          let vault_token1 = &accounts[0];
-          require_keys_eq!(
-              *vault_token1.key,
-              schedule.sending_token_account,
-              ErrorCode::InvalidAccount
-          );
-          let user_token1 = &accounts[1];
-          transfer_token(&user, &user_token1, &vault_token1, sending_amount, &[])
-              .expect("Coin98Vault: CPI failed.");
-      }
+    let seeds: &[&[_]] = &[
+      &SIGNER_SEED_1,
+      vault.to_account_info().key.as_ref(),
+      &[vault.signer_nonce],
+    ];
+    let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
 
-      // Transfer receiving token to user
-      let seeds: &[&[_]] = &[
-          &SIGNER_SEED_1,
-          vault.to_account_info().key.as_ref(),
-          &[vault.signer_nonce],
-      ];
-      transfer_token(
-          &vault_signer,
-          &vault_token0,
-          &user_token0,
-          receiving_amount,
-          &[&seeds],
-      )
-      .expect("Coin98Vault: CPI failed.");
+    // Verify the result of sending token
+    if result.is_err() {
+      return Err(ErrorCode::SendingTokenFailed.into());
+    }
 
       Ok(())
   }
 
   pub fn init_redeem_index(
-      ctx: Context<InitRedeemIndexContext>,
-      _index: u16,
-      _nft_mint: Pubkey,
+    ctx: Context<InitRedeemIndexContext>,
+    _index: u16,
+    _nft_mint: Pubkey,
   ) -> Result<()> {
 
-      let redeem_index = &mut ctx.accounts.redeem_index;
+    let redeem_index = &mut ctx.accounts.redeem_index;
+    redeem_index.is_redeemed = false;
 
-      redeem_index.is_redeemed = false;
-
-      Ok(())
+    Ok(())
   }
 
   #[access_control(is_owner(&ctx.accounts.owner.key, &ctx.accounts.vault))]
   pub fn transfer_ownership(
-      ctx: Context<TransferOwnershipContext>,
-      new_owner: Pubkey,
+    ctx: Context<TransferOwnershipContext>,
+    new_owner: Pubkey,
   ) -> Result<()> {
 
-      let vault = &mut ctx.accounts.vault;
+    let vault = &mut ctx.accounts.vault;
 
-      vault.new_owner = new_owner;
+    vault.new_owner = new_owner;
 
-      Ok(())
+    Ok(())
   }
 
   #[access_control(verify_new_owner(&ctx.accounts.new_owner.key, &ctx.accounts.vault))]
@@ -522,146 +449,183 @@ mod coin98_vault {
     ctx: Context<AcceptOwnershipContext>,
   ) -> Result<()> {
 
-        let vault = &mut ctx.accounts.vault;
+    let vault = &mut ctx.accounts.vault;
 
-        vault.owner = vault.new_owner;
-        vault.new_owner = anchor_lang::system_program::ID; // Set to empty
+    vault.owner = vault.new_owner;
+    vault.new_owner = anchor_lang::system_program::ID; // Set to empty
 
-        Ok(())
+    Ok(())
     }
 }
 
 /// Returns true if the user has root priviledge of the vault
 pub fn is_owner(user: &Pubkey, vault: &Vault) -> Result<()> {
 
-    require_keys_eq!(*user, vault.owner, ErrorCode::Unauthorized);
+  require_keys_eq!(*user, vault.owner, ErrorCode::Unauthorized);
 
-    Ok(())
+  Ok(())
 }
 
 /// Returns true if the user is the newly apppointed owner of the vault
 pub fn verify_new_owner(user: &Pubkey, vault: &Vault) -> Result<()> {
 
-    require_keys_eq!(*user, vault.new_owner, ErrorCode::Unauthorized);
+  require_keys_eq!(*user, vault.new_owner, ErrorCode::Unauthorized);
 
-    Ok(())
+  Ok(())
 }
 
 /// Returns true if the user is an admin of a specified vault
 pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
-    if *user == vault.owner {
-        return Ok(());
-    }
+  if *user == vault.owner {
+      return Ok(());
+  }
 
-    let result = vault.admins.iter().position(|&key| key == *user);
-    if result == None {
-        return Err(ErrorCode::Unauthorized.into());
-    }
+  let result = vault.admins.iter().position(|&key| key == *user);
+  if result == None {
+      return Err(ErrorCode::Unauthorized.into());
+  }
 
-    Ok(())
+  Ok(())
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
   require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
-    require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
+  require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
 
-    Ok(())
+  Ok(())
 }
 
 pub fn verify_proof(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
-    let redemption_data = match timestamp {
+  let redemption_data = match timestamp {
     Some(timestamp) => { // if timestamp field exists on merkle node
-            msg!("Vault V2");
-            let redemption_params = RedemptionParamsV2 {
-                index: index,
-                timestamp,
-                address: *user,
-                receiving_amount: receiving_amount,
-                sending_amount: sending_amount,
-            };
-            redemption_params.try_to_vec().unwrap()
+      msg!("Vault V2");
+      let redemption_params = RedemptionParamsV2 {
+        index: index,
+        timestamp,
+        address: *user,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
     },
     None => { // older version of merkle node
-            msg!("Old version vault");
-            let redemption_params = RedemptionParams {
-                index: index,
-                address: *user,
-                receiving_amount: receiving_amount,
-                sending_amount: sending_amount,
-            };
-            redemption_params.try_to_vec().unwrap()
-        }
-    };
+      msg!("Old version vault");
+      let redemption_params = RedemptionParams {
+        index: index,
+        address: *user,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    }
+  };
 
-    let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
-    let leaf = hash(&redemption_data[..]);
-    let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
-    require!(is_valid_proof, ErrorCode::Unauthorized);
+  let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
+  let leaf = hash(&redemption_data[..]);
+  let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
+  require!(is_valid_proof, ErrorCode::Unauthorized);
 
-    let user_index: usize = index.into();
-    require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);
+  let user_index: usize = index.into();
+  require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);
 
-    Ok(())
+  Ok(())
 }
 
 pub fn verify_proof_multi(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
-    let redemption_data = match timestamp {
-    Some(timestamp) => { // newer version if timestamp field exists on merkle node
-            let redemption_params = RedemptionMultiParamsV2 {
-                index: index,
-                timestamp,
-                address: *user,
-                receiving_token_mint: receiving_token_mint,
-                receiving_amount: receiving_amount,
-                sending_amount: sending_amount,
-            };
-            redemption_params.try_to_vec().unwrap()
-    },
-    None => { // older version of merkle node
-            let redemption_params = RedemptionMultiParams {
-                index: index,
-                address: *user,
-                receiving_token_mint: receiving_token_mint,
-                receiving_amount: receiving_amount,
-                sending_amount: sending_amount,
-            };
-            redemption_params.try_to_vec().unwrap()
-        }
+  let redemption_data = match timestamp {
+  Some(timestamp) => { // newer version if timestamp field exists on merkle node
+    let redemption_params = RedemptionMultiParamsV2 {
+        index: index,
+        timestamp,
+        address: *user,
+        receiving_token_mint: receiving_token_mint,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
     };
+    redemption_params.try_to_vec().unwrap()
+  },
+  None => { // older version of merkle node
+    let redemption_params = RedemptionMultiParams {
+      index: index,
+      address: *user,
+      receiving_token_mint: receiving_token_mint,
+      receiving_amount: receiving_amount,
+      sending_amount: sending_amount,
+    };
+    redemption_params.try_to_vec().unwrap()
+  }
+  };
 
-    let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
-    let leaf = hash(&redemption_data[..]);
-    let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
-    require!(is_valid_proof, ErrorCode::Unauthorized);
+  let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
+  let leaf = hash(&redemption_data[..]);
+  let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
+  require!(is_valid_proof, ErrorCode::Unauthorized);
 
-    let user_index: usize = index.into();
-    require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);
+  let user_index: usize = index.into();
+  require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);
 
-    Ok(())
+  Ok(())
+}
+
+pub fn sending_token<'a>(
+  schedule: &Schedule,
+  accounts: &[AccountInfo<'a>],
+  user: &AccountInfo<'a>,
+  seeds: &[&[u8]],
+  vault_signer: &AccountInfo<'a>,
+  vault_token0: &AccountInfo<'a>,
+  user_token0: &AccountInfo<'a>,
+  sending_amount: u64,
+  receiving_amount: u64,
+) -> Result<()> {
+  if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
+    let vault_token1 = &accounts[0];
+    require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
+    let user_token1 = &accounts[1];
+    transfer_token(
+      &user,
+      &user_token1,
+      &vault_token1,
+      sending_amount,
+      &[]
+    )
+    .expect("Coin98Vault: CPI failed.");
+  }
+
+  transfer_token(
+    &vault_signer,
+    &vault_token0,
+    &user_token0,
+    receiving_amount,
+    &[&seeds]
+  )
+  .expect("Coin98Vault: CPI failed.");
+
+  Ok(())
 }
 
 /// Verify merkle proof for NFT collection-based redemption
 pub fn verify_proof_nft_collection(
-    redeem_type: String,
-    index: u16,
-    timestamp: i64,
-    nft_mint: &Pubkey,
-    collection_mint: &Pubkey,
-    receiving_amount: u64,
-    sending_amount: u64,
-    proofs: &Vec<[u8; 32]>,
-    schedule: &Schedule,
+  redeem_type: String,
+  index: u16,
+  timestamp: i64,
+  nft_mint: &Pubkey,
+  collection_mint: &Pubkey,
+  receiving_amount: u64,
+  sending_amount: u64,
+  proofs: &Vec<[u8; 32]>,
+  schedule: &Schedule,
 ) -> Result<()> {
     // Always use Vault NFT Collection flow
     msg!("Vault NFT Collection");
     let redemption_params = RedemptionNFTParams {
-        redeem_type,
-        index,
-        timestamp,
-        nft_mint: *nft_mint,
-        collection_mint: *collection_mint,
-        receiving_amount,
-        sending_amount,
+      redeem_type,
+      index,
+      timestamp,
+      nft_mint: *nft_mint,
+      collection_mint: *collection_mint,
+      receiving_amount,
+      sending_amount,
     };
     let redemption_data = redemption_params.try_to_vec().unwrap();
 
@@ -674,72 +638,72 @@ pub fn verify_proof_nft_collection(
 }
 
 pub fn verify_nft_ownership_and_collection(
-    user: &Pubkey,
-    nft_mint: &Pubkey,
-    expected_collection: &Pubkey,
-    user_nft_token_account: &AccountInfo,
-    nft_metadata_account: &AccountInfo,
+  user: &Pubkey,
+  nft_mint: &Pubkey,
+  expected_collection: &Pubkey,
+  user_nft_token_account: &AccountInfo,
+  nft_metadata_account: &AccountInfo,
 ) -> Result<()> {
-    // Step 1: Verify NFT ownership
-    // Unpack the token account to verify ownership details
-    let token_account_data = user_nft_token_account.try_borrow_data().map_err(|_| { ErrorCode::InvalidAccount })?;
+  // Step 1: Verify NFT ownership
+  // Unpack the token account to verify ownership details
+  let token_account_data = user_nft_token_account.try_borrow_data().map_err(|_| { ErrorCode::InvalidAccount })?;
 
-    let token_account = TokenAccount::unpack_from_slice(&token_account_data).map_err(|_e| { ErrorCode::InvalidAccount })?;
+  let token_account = TokenAccount::unpack_from_slice(&token_account_data).map_err(|_e| { ErrorCode::InvalidAccount })?;
 
-    // Verify the token account belongs to the user
-    if token_account.owner != *user {
-        return Err(ErrorCode::Unauthorized.into());
-    }
+  // Verify the token account belongs to the user
+  if token_account.owner != *user {
+    return Err(ErrorCode::Unauthorized.into());
+  }
 
-    // Verify the token account is for the correct NFT mint
-    if token_account.mint != *nft_mint {
-        return Err(ErrorCode::InvalidMintAccount.into());
-    }
+  // Verify the token account is for the correct NFT mint
+  if token_account.mint != *nft_mint {
+    return Err(ErrorCode::InvalidMintAccount.into());
+  }
 
-    // For NFTs, verify that this follows NFT standards (amount = 1)
-    if token_account.amount != 1 {
-        return Err(ErrorCode::InvalidTokenAmount.into());
-    }
+  // For NFTs, verify that this follows NFT standards (amount = 1)
+  if token_account.amount != 1 {
+    return Err(ErrorCode::InvalidTokenAmount.into());
+  }
 
-    // Simplified unpacking and verification of metadata account
-    let metadata_data = nft_metadata_account.try_borrow_data().map_err(|_| ErrorCode::InvalidMetadata)?;
-    let metadata = Metadata::safe_deserialize(&metadata_data).map_err(|_| ErrorCode::InvalidMetadata)?;
+  // Simplified unpacking and verification of metadata account
+  let metadata_data = nft_metadata_account.try_borrow_data().map_err(|_| ErrorCode::InvalidMetadata)?;
+  let metadata = Metadata::safe_deserialize(&metadata_data).map_err(|_| ErrorCode::InvalidMetadata)?;
 
-    // Verify the NFT belongs to the expected collection
-    if let Some(collection) = metadata.collection {
-        if collection.key != *expected_collection {
-            return Err(ErrorCode::InvalidCollection.into());
-        }
-    } else {
+  // Verify the NFT belongs to the expected collection
+  if let Some(collection) = metadata.collection {
+    if collection.key != *expected_collection {
         return Err(ErrorCode::InvalidCollection.into());
     }
+  } else {
+    return Err(ErrorCode::InvalidCollection.into());
+  }
 
-    Ok(())
+  Ok(())
 }
 
 pub fn get_associated_token_address(wallet: &Pubkey, mint: &Pubkey) -> Pubkey {
-    let ata_program: Pubkey = Pubkey::new_from_array([
-        140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142, 13, 131, 11, 90, 19, 153,
-        218, 255, 16, 132, 4, 142, 123, 216, 219, 233, 248, 89,
-    ]);
-    Pubkey::find_program_address(
-        &[
-            &wallet.to_bytes(),
-            &TOKEN_PROGRAM_ID.to_bytes(),
-            &mint.to_bytes(),
-        ],
-        &ata_program,
-    )
-    .0
+  let ata_program: Pubkey = Pubkey::new_from_array([
+    140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142, 13, 131, 11, 90, 19, 153,
+    218, 255, 16, 132, 4, 142, 123, 216, 219, 233, 248, 89,
+  ]);
+  Pubkey::find_program_address(
+    &[
+      &wallet.to_bytes(),
+      &TOKEN_PROGRAM_ID.to_bytes(),
+      &mint.to_bytes(),
+    ],
+    &ata_program,
+  )
+  .0
 }
 
 pub fn find_metadata_account(mint: &Pubkey) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-        &[
-            Metadata::PREFIX,
-            mpl_token_metadata::ID.as_ref(),
-            mint.as_ref(),
-        ],
-        &mpl_token_metadata::ID,
-    )
+  Pubkey::find_program_address(
+    &[
+      Metadata::PREFIX,
+      mpl_token_metadata::ID.as_ref(),
+      mint.as_ref(),
+    ],
+    &mpl_token_metadata::ID,
+  )
 }

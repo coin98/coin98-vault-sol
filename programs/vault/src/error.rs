@@ -44,5 +44,8 @@ pub enum ErrorCode {
 
   #[msg("Coin98Vault: Wrong vault Id")]
   InvalidVault,
+
+  #[msg("Coin98Vault: Sending token failed")]
+  SendingTokenFailed,
 }
 
