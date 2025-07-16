@@ -74,49 +74,49 @@ mod coin98_vault {
     Ok(())
   }
 
-    #[access_control(is_admin(&ctx.accounts.admin.key, &ctx.accounts.vault))]
-    pub fn create_schedule(
-        ctx: Context<CreateScheduleContext>,
-        user_count: u16,
-        event_id: u64,
-        timestamp: i64,
-        merkle_root: [u8; 32],
-        schedule_type: u8,
-        receiving_token_mint: Pubkey,
-        receiving_token_account: Pubkey,
-        sending_token_mint: Pubkey,
-        sending_token_account: Pubkey,
-    ) -> Result<()> {
+  #[access_control(is_admin(&ctx.accounts.admin.key, &ctx.accounts.vault))]
+  pub fn create_schedule(
+    ctx: Context<CreateScheduleContext>,
+    user_count: u16,
+    event_id: u64,
+    timestamp: i64,
+    merkle_root: [u8; 32],
+    schedule_type: u8,
+    receiving_token_mint: Pubkey,
+    receiving_token_account: Pubkey,
+    sending_token_mint: Pubkey,
+    sending_token_account: Pubkey,
+  ) -> Result<()> {
 
-        let vault = &ctx.accounts.vault;
+    let vault = &ctx.accounts.vault;
 
-        let schedule = &mut ctx.accounts.schedule;
+    let schedule = &mut ctx.accounts.schedule;
 
-        if schedule_type == 0 {
-            schedule.obj_type = ObjType::Distribution;
-        } else if schedule_type == 1 {
-            schedule.obj_type = ObjType::DistributionMulti;
-        } else if schedule_type == 2 {
-            schedule.obj_type = ObjType::NFTDistribution;
-        } else if schedule_type == 3 {
-            schedule.obj_type = ObjType::NFTCollectionDistribution;
-        } else {
-            return Err(ErrorCode::InvalidScheduleType.into());
-        }
-        schedule.nonce = ctx.bumps.schedule;
-        schedule.event_id = event_id;
-        schedule.vault_id = vault.key();
-        schedule.timestamp = timestamp;
-        schedule.merkle_root = merkle_root.try_to_vec().unwrap();
-        schedule.receiving_token_mint = receiving_token_mint;
-        schedule.receiving_token_account = receiving_token_account;
-        schedule.sending_token_mint = sending_token_mint;
-        schedule.sending_token_account = sending_token_account;
-        schedule.is_active = true;
-        schedule.redemptions = vec![false; user_count.into()];
-
-        Ok(())
+    if schedule_type == 0 {
+        schedule.obj_type = ObjType::Distribution;
+    } else if schedule_type == 1 {
+        schedule.obj_type = ObjType::DistributionMulti;
+    } else if schedule_type == 2 {
+        schedule.obj_type = ObjType::NFTDistribution;
+    } else if schedule_type == 3 {
+        schedule.obj_type = ObjType::NFTCollectionDistribution;
+    } else {
+        return Err(ErrorCode::InvalidScheduleType.into());
     }
+    schedule.nonce = ctx.bumps.schedule;
+    schedule.event_id = event_id;
+    schedule.vault_id = vault.key();
+    schedule.timestamp = timestamp;
+    schedule.merkle_root = merkle_root.try_to_vec().unwrap();
+    schedule.receiving_token_mint = receiving_token_mint;
+    schedule.receiving_token_account = receiving_token_account;
+    schedule.sending_token_mint = sending_token_mint;
+    schedule.sending_token_account = sending_token_account;
+    schedule.is_active = true;
+    schedule.redemptions = vec![false; user_count.into()];
+
+    Ok(())
+  }
 
   #[access_control(is_admin(&ctx.accounts.admin.key, &ctx.accounts.vault))]
   pub fn set_schedule_status(
@@ -147,12 +147,12 @@ mod coin98_vault {
       &[vault.signer_nonce],
     ];
     transfer_lamport(
-        &vault_signer,
-        &recipient,
-        amount,
-        &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+      &vault_signer,
+      &recipient,
+      amount,
+      &[&seeds]
+    )
+    .expect("Coin98Vault: CPI failed.");
 
     Ok(())
   }
@@ -175,13 +175,13 @@ mod coin98_vault {
       &[vault.signer_nonce],
     ];
     transfer_token(
-        &vault_signer,
-        &sender,
-        &recipient,
-        amount,
-        &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+      &vault_signer,
+      &sender,
+      &recipient,
+      amount,
+      &[&seeds]
+    )
+    .expect("Coin98Vault: CPI failed.");
 
     Ok(())
   }
@@ -287,14 +287,14 @@ mod coin98_vault {
 
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::NFTDistribution))]
   pub fn redeem_token_nft<'a>(
-      ctx: Context<'_, '_, '_, 'a, RedeemTokenNFTContext<'a>>,
-      index: u16,
-      timestamp: i64,
-      nft_mint: Pubkey,
-      nft_collection: Pubkey,
-      receiving_amount: u64,
-      sending_amount: u64,
-      proofs: Vec<[u8; 32]>,
+    ctx: Context<'_, '_, '_, 'a, RedeemTokenNFTContext<'a>>,
+    index: u16,
+    timestamp: i64,
+    nft_mint: Pubkey,
+    nft_collection: Pubkey,
+    receiving_amount: u64,
+    sending_amount: u64,
+    proofs: Vec<[u8; 32]>,
   ) -> Result<()> {
     msg!("Coin98Vault: Instruction_RedeemTokenNFT");
     let user = &ctx.accounts.user;
@@ -320,15 +320,15 @@ mod coin98_vault {
     // Verify merkle proof
     require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
     verify_proof_nft_collection(
-        "specific".to_string(),
-        index,
-        timestamp,
-        &nft_mint,
-        &nft_collection,
-        receiving_amount,
-        sending_amount,
-        &proofs,
-        &schedule,
+      "specific".to_string(),
+      index,
+      timestamp,
+      &nft_mint,
+      &nft_collection,
+      receiving_amount,
+      sending_amount,
+      &proofs,
+      &schedule,
     )?;
 
     let user_index: usize = index.into();
@@ -337,9 +337,9 @@ mod coin98_vault {
     schedule.redemptions[user_index] = true;
 
     let seeds: &[&[_]] = &[
-        &SIGNER_SEED_1,
-        vault.to_account_info().key.as_ref(),
-        &[vault.signer_nonce],
+      &SIGNER_SEED_1,
+      vault.to_account_info().key.as_ref(),
+      &[vault.signer_nonce],
     ];
     let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
 
@@ -399,9 +399,9 @@ mod coin98_vault {
     )?;
 
     if redeem_index.is_redeemed {
-        return Err(ErrorCode::Redeemed.into());
+      return Err(ErrorCode::Redeemed.into());
     } else {
-        redeem_index.is_redeemed = true;
+      redeem_index.is_redeemed = true;
     }
 
     let seeds: &[&[_]] = &[
@@ -416,7 +416,7 @@ mod coin98_vault {
       return Err(ErrorCode::SendingTokenFailed.into());
     }
 
-      Ok(())
+    Ok(())
   }
 
   pub fn init_redeem_index(
