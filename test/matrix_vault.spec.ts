@@ -1,7 +1,6 @@
 import { SolanaConfigService } from "@coin98/solana-support-library/config";
 import {
   mintNft,
-  transferNft,
   updateMetadata,
   verifyCollection,
 } from "./fixtures";
@@ -10,20 +9,15 @@ import {
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  SystemProgram,
 } from "@solana/web3.js";
 import {
   Account,
   createMint,
-  getAccount,
   getOrCreateAssociatedTokenAccount,
-  mintTo,
-  transfer,
 } from "@solana/spl-token";
 import {
   Collection,
-  PROGRAM_ADDRESS,
-  VerifySizedCollectionItemInstructionAccounts,
-  createVerifySizedCollectionItemInstruction,
 } from "@metaplex-foundation/mpl-token-metadata";
 import BN from "bn.js";
 import {
@@ -33,18 +27,15 @@ import {
   getMetadataAddress,
 } from "./util";
 import { expect } from "chai";
-import { MerkleDistributionService, VaultService } from "../services";
+import { VaultService } from "../services";
 import {
   MerkleTree,
   TokenProgramService,
 } from "@coin98/solana-support-library";
 import { MerkleDistributionNftService } from "../services/merkle_distributor.service";
-import { token } from "@project-serum/anchor/dist/cjs/utils";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const PROGRAM_ID = new PublicKey(
-  "7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY"
-);
+const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 let payer: Keypair;
 let vaultName: string;
 
@@ -65,7 +56,9 @@ let scheduleAddress: PublicKey;
 let tree: MerkleTree;
 let snapshot = currentTime();
 
-describe("Matrix Vault", () => {
+let eventId: BN;
+
+describe("Vault for specific NFT", () => {
   before(async () => {
     {
       vaultName = (Math.random() + 1).toString(36).substring(7);
@@ -501,4 +494,220 @@ describe("Matrix Vault", () => {
       PROGRAM_ID
     );
   });
+
+  it("Create schedule for NFT collection", async () => {
+    tree = MerkleDistributionNftService.createTree([
+      {
+        redeemType: "collection",
+        index: 0,
+        timestamp: new BN(snapshot),
+        nftMint: SystemProgram.programId,
+        collectionMint: collectionMint.publicKey,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      },
+      {
+        redeemType: "collection",
+        index: 1,
+        timestamp: new BN(snapshot),
+        nftMint: SystemProgram.programId,
+        collectionMint: collectionMint.publicKey,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      },
+    ]);
+
+    const vaultInfo = await VaultService.getVaultAccountInfo(
+      connection,
+      vaultAddress
+    );
+    const vaultAuthority = vaultInfo.signer;
+
+    const vaultSendTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        vaultAuthority,
+        sendingTokenMint.publicKey
+      );
+
+    const vaultReceiveTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        vaultAuthority,
+        receivingTokenMint.publicKey
+      );
+
+    await TokenProgramService.mint(
+      connection,
+      root,
+      receivingTokenMint.publicKey,
+      vaultReceiveTokenAccount,
+      new BN(200)
+    );
+
+    eventId = new BN(Math.random() * 1000000)
+    scheduleAddress = await VaultService.createSchedule(
+      connection,
+      root,
+      vaultAddress,
+      2,
+      eventId,
+      new BN(0),
+      tree.root().hash,
+      new BN(3),
+      receivingTokenMint.publicKey,
+      vaultReceiveTokenAccount,
+      sendingTokenMint.publicKey,
+      vaultSendTokenAccount,
+      PROGRAM_ID
+    );
+    console.log("Schedule Address: ", scheduleAddress.toBase58());
+
+    const scheduleInfo = await VaultService.getScheduleAccountInfo(
+      connection,
+      scheduleAddress
+    );
+    expect(scheduleInfo.vaultId.toBase58()).to.equal(vaultAddress.toBase58());
+  });
+
+  it("Claim NFT collection ID 0", async () => {
+    const proofs = MerkleDistributionNftService.getProof(tree, 0).map(
+      (p) => p.hash
+    );
+
+    const userReceiveTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        user2.publicKey,
+        receivingTokenMint.publicKey
+      );
+
+    const [isRedeemedAddress, _] = VaultService.findRedeemIndexAddress(
+      eventId,
+      0,
+      nftMints[0],
+      PROGRAM_ID
+    );
+
+    await VaultService.initRedeemIndex(
+      connection,
+      user2,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      0,
+      nftMints[0],
+      PROGRAM_ID
+    );
+
+    const tx = await VaultService.redeemNFTCollection(
+      connection,
+      user2,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      0,
+      new BN(snapshot),
+      nftMints[0],
+      collectionMint.publicKey,
+      new BN(100),
+      new BN(0),
+      proofs,
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  })
+
+  it("Reclaim NFT collection ID 0", async () => {
+    const proofs = MerkleDistributionNftService.getProof(tree, 0).map(
+      (p) => p.hash
+    );
+
+    const userReceiveTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        user2.publicKey,
+        receivingTokenMint.publicKey
+      );
+
+    const [isRedeemedAddress, _] = VaultService.findRedeemIndexAddress(
+      eventId,
+      0,
+      nftMints[0],
+      PROGRAM_ID
+    );
+
+    const tx = await VaultService.redeemNFTCollection(
+      connection,
+      user2,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      0,
+      new BN(snapshot),
+      nftMints[0],
+      collectionMint.publicKey,
+      new BN(100),
+      new BN(0),
+      proofs,
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Claim NFT collection ID 1", async () => {
+    const proofs = MerkleDistributionNftService.getProof(tree, 1).map(
+      (p) => p.hash
+    );
+
+    const userReceiveTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        user2.publicKey,
+        receivingTokenMint.publicKey
+      );
+
+    const [isRedeemedAddress, _] = VaultService.findRedeemIndexAddress(
+      eventId,
+      1,
+      nftMints[1],
+      PROGRAM_ID
+    );
+
+    await VaultService.initRedeemIndex(
+      connection,
+      user3,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      1,
+      nftMints[1],
+      PROGRAM_ID
+    );
+
+    const tx = await VaultService.redeemNFTCollection(
+      connection,
+      user3,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      1,
+      new BN(snapshot),
+      nftMints[1],
+      collectionMint.publicKey,
+      new BN(100),
+      new BN(0),
+      proofs,
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  })
 });

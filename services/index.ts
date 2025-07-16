@@ -9,9 +9,3 @@ export {
   MerkleDistributionService,
   MerkleDistributionNftService,
 } from "./merkle_distributor.service";
-export {
-  NFTDiscoveryService,
-  NFTMetadata,
-  UserNFTHolding,
-  CollectionVerificationResult,
-} from "./nft_discovery.service";

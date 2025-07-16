@@ -331,76 +331,79 @@ mod coin98_vault {
       sending_amount: u64,
       proofs: Vec<[u8; 32]>,
   ) -> Result<()> {
-      let user = &ctx.accounts.user;
-      msg!("Coin98Vault: Instruction_RedeemTokenNFT");
+    msg!("Coin98Vault: Instruction_RedeemTokenNFT");
+    let user = &ctx.accounts.user;
+    let vault = &ctx.accounts.vault;
+    let vault_signer = &ctx.accounts.vault_signer;
+    let vault_token0 = &ctx.accounts.vault_token0;
+    let user_token0 = &ctx.accounts.user_token0;
+    let user_nft_token_account = &ctx.accounts.user_nft_token_account;
+    let nft_metadata_account = &ctx.accounts.nft_metadata_account;
+    let schedule = &mut ctx.accounts.schedule;
+    let clock = Clock::get().unwrap();
 
-      let vault = &ctx.accounts.vault;
-      let vault_signer = &ctx.accounts.vault_signer;
-      let vault_token0 = &ctx.accounts.vault_token0;
-      let user_token0 = &ctx.accounts.user_token0;
-      let user_nft_token_account = &ctx.accounts.user_nft_token_account;
-      let nft_metadata_account = &ctx.accounts.nft_metadata_account;
-      let schedule = &mut ctx.accounts.schedule;
-      let clock = Clock::get().unwrap();
+    // Verify NFT ownership
+    verify_nft_ownership_and_collection(
+      &user.key,
+      &nft_mint,
+      &nft_collection,
+      user_nft_token_account,
+      nft_metadata_account,
+    )?;
 
-      // Verify NFT ownership
-      verify_nft_ownership_and_collection(
-          &ctx.accounts.user.key,
-          &nft_mint,
-          &nft_collection,
-          user_nft_token_account,
-          nft_metadata_account,
-      )?;
-      msg!("Coin98Vault: NFT ownership verification passed");
+    // Verify merkle proof
+    require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
+    verify_proof_nft_collection(
+        "specific".to_string(),
+        index,
+        timestamp,
+        &nft_mint,
+        &nft_collection,
+        receiving_amount,
+        sending_amount,
+        &proofs,
+        &schedule,
+    )?;
 
-      // Verify merkle proof
-      require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
-      verify_proof_nft_collection(
-          "specific".to_string(),
-          index,
-          timestamp,
-          &nft_mint,
-          &nft_collection,
-          receiving_amount,
-          sending_amount,
-          &proofs,
-          &schedule,
-      )?;
+    let user_index: usize = index.into();
+    require!(
+      schedule.redemptions[user_index] == false,
+      ErrorCode::Redeemed
+    );
 
-      let user_index: usize = index.into();
-      schedule.redemptions[user_index] = true;
+    schedule.redemptions[user_index] = true;
 
-      // Handle sending token if required
-      if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-          let accounts = &ctx.remaining_accounts;
-          let user = &ctx.accounts.user;
-          let vault_token1 = &accounts[0];
-          require_keys_eq!(
-              *vault_token1.key,
-              schedule.sending_token_account,
-              ErrorCode::InvalidAccount
-          );
-          let user_token1 = &accounts[1];
-          transfer_token(&user, &user_token1, &vault_token1, sending_amount, &[])
-              .expect("Coin98Vault: CPI failed.");
-      }
+    // Handle sending token if required
+    if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
+        let accounts = &ctx.remaining_accounts;
+        let user = &ctx.accounts.user;
+        let vault_token1 = &accounts[0];
+        require_keys_eq!(
+            *vault_token1.key,
+            schedule.sending_token_account,
+            ErrorCode::InvalidAccount
+        );
+        let user_token1 = &accounts[1];
+        transfer_token(&user, &user_token1, &vault_token1, sending_amount, &[])
+            .expect("Coin98Vault: CPI failed.");
+    }
 
-      // Transfer receiving token to user
-      let seeds: &[&[_]] = &[
-          &SIGNER_SEED_1,
-          vault.to_account_info().key.as_ref(),
-          &[vault.signer_nonce],
-      ];
-      transfer_token(
-          &vault_signer,
-          &vault_token0,
-          &user_token0,
-          receiving_amount,
-          &[&seeds],
-      )
-      .expect("Coin98Vault: CPI failed.");
+    // Transfer receiving token to user
+    let seeds: &[&[_]] = &[
+        &SIGNER_SEED_1,
+        vault.to_account_info().key.as_ref(),
+        &[vault.signer_nonce],
+    ];
+    transfer_token(
+        &vault_signer,
+        &vault_token0,
+        &user_token0,
+        receiving_amount,
+        &[&seeds],
+    )
+    .expect("Coin98Vault: CPI failed.");
 
-      Ok(())
+    Ok(())
   }
 
   #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::NFTCollectionDistribution))]
@@ -408,34 +411,32 @@ mod coin98_vault {
       ctx: Context<'_, '_, '_, 'a, RedeemTokenNFTCollectionContext<'a>>,
       index: u16,
       timestamp: i64,
-      proofs: Vec<[u8; 32]>,
       nft_mint: Pubkey,
       nft_collection: Pubkey,
       receiving_amount: u64,
       sending_amount: u64,
+      proofs: Vec<[u8; 32]>,
   ) -> Result<()> {
       msg!("Coin98Vault: Instruction_RedeemTokenNFTCollection");
-
+      let user = &ctx.accounts.user;
       let vault = &ctx.accounts.vault;
       let vault_signer = &ctx.accounts.vault_signer;
       let vault_token0 = &ctx.accounts.vault_token0;
       let user_token0 = &ctx.accounts.user_token0;
       let user_nft_token_account = &ctx.accounts.user_nft_token_account;
       let nft_metadata_account = &ctx.accounts.nft_metadata_account;
+      let redeem_index = &mut ctx.accounts.redeem_index;
+      let schedule = &mut ctx.accounts.schedule;
       let clock = Clock::get().unwrap();
 
-      let schedule = &mut ctx.accounts.schedule;
-
-      // Verify NFT ownership and collection membership in one step
-      msg!("Coin98Vault: Starting combined NFT ownership and collection verification");
+      // Verify NFT ownership and collection
       verify_nft_ownership_and_collection(
-          &ctx.accounts.user.key,
+          &user.key,
           &nft_mint,
           &nft_collection,
           user_nft_token_account,
           nft_metadata_account,
       )?;
-      msg!("Coin98Vault: Combined NFT ownership and collection verification passed");
 
       // Verify merkle proof
       require!(clock.unix_timestamp >= timestamp, ErrorCode::ScheduleLocked);
@@ -451,8 +452,11 @@ mod coin98_vault {
           &schedule,
       )?;
 
-      let user_index: usize = index.into();
-      schedule.redemptions[user_index] = true;
+      if redeem_index.is_redeemed {
+          return Err(ErrorCode::Redeemed.into());
+      } else {
+          redeem_index.is_redeemed = true;
+      }
 
       // Handle sending token if required
       if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
@@ -487,20 +491,33 @@ mod coin98_vault {
       Ok(())
   }
 
-    #[access_control(is_owner(&ctx.accounts.owner.key, &ctx.accounts.vault))]
-    pub fn transfer_ownership(
-        ctx: Context<TransferOwnershipContext>,
-        new_owner: Pubkey,
-    ) -> Result<()> {
+  pub fn init_redeem_index(
+      ctx: Context<InitRedeemIndexContext>,
+      _index: u16,
+      _nft_mint: Pubkey,
+  ) -> Result<()> {
 
-        let vault = &mut ctx.accounts.vault;
+      let redeem_index = &mut ctx.accounts.redeem_index;
 
-        vault.new_owner = new_owner;
+      redeem_index.is_redeemed = false;
 
-        Ok(())
-    }
+      Ok(())
+  }
 
-    #[access_control(verify_new_owner(&ctx.accounts.new_owner.key, &ctx.accounts.vault))]
+  #[access_control(is_owner(&ctx.accounts.owner.key, &ctx.accounts.vault))]
+  pub fn transfer_ownership(
+      ctx: Context<TransferOwnershipContext>,
+      new_owner: Pubkey,
+  ) -> Result<()> {
+
+      let vault = &mut ctx.accounts.vault;
+
+      vault.new_owner = new_owner;
+
+      Ok(())
+  }
+
+  #[access_control(verify_new_owner(&ctx.accounts.new_owner.key, &ctx.accounts.vault))]
   pub fn accept_ownership(
     ctx: Context<AcceptOwnershipContext>,
   ) -> Result<()> {
@@ -653,102 +670,8 @@ pub fn verify_proof_nft_collection(
     let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
     require!(is_valid_proof, ErrorCode::InvalidProof);
 
-    let user_index: usize = index.into();
-
-    require!(
-        schedule.redemptions[user_index] == false,
-        ErrorCode::Redeemed
-    );
-
     Ok(())
 }
-
-// /// Verify NFT ownership by checking if user owns the specific NFT using Metaplex standards
-// pub fn verify_nft_ownership(
-//     user: &Pubkey,
-//     nft_mint: &Pubkey,
-//     user_nft_token_account: &AccountInfo,
-// ) -> Result<()> {
-//     msg!(
-//         "Coin98Vault: ==> Starting NFT verification for user: {} and mint: {}",
-//         user,
-//         nft_mint
-//     );
-//     msg!(
-//         "Coin98Vault: ==> Token account: {}",
-//         user_nft_token_account.key
-//     );
-
-//     // Check if the account is owned by the SPL Token Program
-//     if *user_nft_token_account.owner != TOKEN_PROGRAM_ID {
-//         msg!(
-//             "Coin98Vault: ==> ERROR: Account not owned by token program. Owner: {}, Expected: {}",
-//             user_nft_token_account.owner,
-//             TOKEN_PROGRAM_ID
-//         );
-//         return Err(ErrorCode::InvalidAccount.into());
-//     }
-//     msg!("Coin98Vault: ==> Token program ownership check passed");
-
-//     // Unpack the token account to verify ownership
-//     let token_account_data = user_nft_token_account.try_borrow_data().map_err(|_| {
-//         msg!("Coin98Vault: ==> ERROR: Failed to borrow token account data");
-//         ErrorCode::InvalidAccount
-//     })?;
-//     msg!(
-//         "Coin98Vault: ==> Token account data borrowed, length: {}",
-//         token_account_data.len()
-//     );
-
-//     let token_account = TokenAccount::unpack_from_slice(&token_account_data).map_err(|_e| {
-//         msg!("Coin98Vault: ==> ERROR: Failed to unpack token account");
-//         ErrorCode::InvalidAccount
-//     })?;
-//     msg!("Coin98Vault: ==> Token account unpacked successfully");
-
-//     msg!(
-//         "Coin98Vault: ==> Token account details: owner={}, mint={}, amount={}",
-//         token_account.owner,
-//         token_account.mint,
-//         token_account.amount
-//     );
-
-//     // Verify the token account belongs to the user
-//     if token_account.owner != *user {
-//         msg!(
-//             "Coin98Vault: ==> ERROR: Token account owner mismatch. Expected: {}, Actual: {}",
-//             user,
-//             token_account.owner
-//         );
-//         return Err(ErrorCode::Unauthorized.into());
-//     }
-//     msg!("Coin98Vault: ==> Token account owner verification passed");
-
-//     // Verify the token account is for the correct NFT mint
-//     if token_account.mint != *nft_mint {
-//         msg!(
-//             "Coin98Vault: ==> ERROR: Token account mint mismatch. Expected: {}, Actual: {}",
-//             nft_mint,
-//             token_account.mint
-//         );
-//         return Err(ErrorCode::InvalidAccount.into());
-//     }
-//     msg!("Coin98Vault: ==> Token account mint verification passed");
-
-//     // For NFTs, verify that this follows NFT standards (amount = 1, decimals = 0)
-//     if token_account.amount != 1 {
-//         msg!(
-//             "Coin98Vault: ==> ERROR: Invalid NFT amount. Expected: 1, Actual: {}",
-//             token_account.amount
-//         );
-//         return Err(ErrorCode::InvalidAccount.into());
-//     }
-//     msg!("Coin98Vault: ==> NFT amount verification passed");
-
-//     msg!("Coin98Vault: ==> NFT ownership verified successfully!");
-//     Ok(())
-// }
-
 
 pub fn verify_nft_ownership_and_collection(
     user: &Pubkey,

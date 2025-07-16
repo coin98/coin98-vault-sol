@@ -38,5 +38,11 @@ pub enum ErrorCode {
 
   #[msg("Coin98Vault: Invalid proof")]
   InvalidProof,
+
+  #[msg("Coin98Vault: Wrong schedule object type")]
+  WrongScheduleObjectType,
+
+  #[msg("Coin98Vault: Wrong vault Id")]
+  InvalidVault,
 }
 

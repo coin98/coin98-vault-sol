@@ -73,7 +73,7 @@ pub struct CreateScheduleContext<'info> {
     bump,
     payer = admin,
     space = 16 + Schedule::size(user_count),
-  )]
+    )]
     pub schedule: Account<'info, Schedule>,
 
     pub system_program: Program<'info, System>,
@@ -274,32 +274,32 @@ pub struct RedeemTokenNFTContext<'info> {
     pub vault: Account<'info, Vault>,
 
     #[account(
-    mut,
-    seeds = [
-      &SCHEDULE_SEED_1,
-      &shared::derive_event_id(schedule.event_id).as_ref(),
-    ],
+      mut,
+      seeds = [
+        &SCHEDULE_SEED_1,
+        &shared::derive_event_id(schedule.event_id).as_ref(),
+      ],
     bump = schedule.nonce,
-    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::NFTDistribution @ErrorCode::InvalidAccount,
-  )]
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+    constraint = schedule.obj_type == ObjType::NFTDistribution @ErrorCode::WrongScheduleObjectType,
+    )]
     pub schedule: Account<'info, Schedule>,
 
     /// CHECK: PDA to hold vault's assets
     #[account(
-    seeds = [
-      &SIGNER_SEED_1,
-      vault.to_account_info().key.as_ref(),
-    ],
-    bump = vault.signer_nonce
-  )]
+      seeds = [
+        &SIGNER_SEED_1,
+        vault.to_account_info().key.as_ref(),
+      ],
+      bump = vault.signer_nonce
+    )]
     pub vault_signer: AccountInfo<'info>,
 
     /// CHECK: Program's TokenAccount for distribution
     #[account(
-    mut,
-    constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
-  )]
+      mut,
+      constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
+    )]
     pub vault_token0: AccountInfo<'info>,
 
     /// CHECK: User account eligible to redeem token. Must sign to provide proof of redemption
@@ -337,46 +337,44 @@ pub struct RedeemTokenNFTCollectionContext<'info> {
     pub vault: Account<'info, Vault>,
 
     #[account(
-    mut,
-    seeds = [
-      &SCHEDULE_SEED_1,
-      &shared::derive_event_id(schedule.event_id).as_ref(),
-    ],
-    bump = schedule.nonce,
-    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::NFTCollectionDistribution @ErrorCode::InvalidAccount,
-  )]
+      mut,
+      seeds = [
+        &SCHEDULE_SEED_1,
+        &shared::derive_event_id(schedule.event_id).as_ref(),
+      ],
+      bump = schedule.nonce,
+      constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+      constraint = schedule.obj_type == ObjType::NFTCollectionDistribution @ErrorCode::WrongScheduleObjectType,
+    )]
     pub schedule: Account<'info, Schedule>,
 
     #[account(
-    init,
-    payer = user,
-    seeds = [
-      &REDEEM_INDEX_SEED_1,
-      &shared::derive_event_id(schedule.event_id).as_ref(),
-      index.to_le_bytes().as_ref(),
-      nft_mint.as_ref(),
-    ],
-    bump,
-    space = 8 + 1,
-  )]
+      mut,
+      seeds = [
+        &REDEEM_INDEX_SEED_1,
+        &shared::derive_event_id(schedule.event_id).as_ref(),
+        index.to_le_bytes().as_ref(),
+        nft_mint.as_ref(),
+      ],
+      bump,
+    )]
     pub redeem_index: Account<'info, RedemptionIndex>,
 
     /// CHECK: PDA to hold vault's assets
     #[account(
-    seeds = [
-      &SIGNER_SEED_1,
-      vault.to_account_info().key.as_ref(),
-    ],
-    bump = vault.signer_nonce
-  )]
+      seeds = [
+        &SIGNER_SEED_1,
+        vault.to_account_info().key.as_ref(),
+      ],
+      bump = vault.signer_nonce
+    )]
     pub vault_signer: AccountInfo<'info>,
 
     /// CHECK: Program's TokenAccount for distribution
     #[account(
-    mut,
-    constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
-  )]
+      mut,
+      constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
+    )]
     pub vault_token0: AccountInfo<'info>,
 
     /// CHECK: User account eligible to redeem token. Must sign to provide proof of redemption
@@ -388,17 +386,59 @@ pub struct RedeemTokenNFTCollectionContext<'info> {
     pub user_token0: AccountInfo<'info>,
 
     /// CHECK: User's NFT token account to verify ownership
-    #[account(mut)]
+    #[account(
+      mut,
+      address = get_associated_token_address(&user.key(), &nft_mint)
+    )]
     pub user_nft_token_account: AccountInfo<'info>,
 
-    /// CHECK: NFT metadata account for collection verification
+    /// CHECK: NFT metadata account for verification
+    #[account(
+      mut,
+      address = find_metadata_account(&nft_mint).0
+    )]
     pub nft_metadata_account: AccountInfo<'info>,
 
     /// CHECK: Solana native Token Program
     #[account(
-    constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
-  )]
+      constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
+    )]
     pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(_index: u16, _nft_mint: Pubkey)]
+pub struct InitRedeemIndexContext<'info> {
+
+    /// CHECK: vault admin, verified using #access_control
+    #[account(signer, mut)]
+    pub user: AccountInfo<'info>,
+
+    pub vault: Account<'info, Vault>,
+
+    #[account(
+      init,
+      payer = user,
+      seeds = [
+        &REDEEM_INDEX_SEED_1,
+        &shared::derive_event_id(schedule.event_id).as_ref(),
+        _index.to_le_bytes().as_ref(),
+        _nft_mint.as_ref(),
+      ],
+      bump,
+      space = 8 + 1,
+    )]
+    pub redeem_index: Account<'info, RedemptionIndex>,
+
+    #[account(
+      seeds = [
+        &SCHEDULE_SEED_1,
+        &shared::derive_event_id(schedule.event_id).as_ref(),
+      ],
+      bump = schedule.nonce,
+      constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+    )]
+    pub schedule: Account<'info, Schedule>,
 
     pub system_program: Program<'info, System>,
 }
