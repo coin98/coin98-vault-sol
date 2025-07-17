@@ -134,10 +134,10 @@ export class VaultService {
     const transaction = new Transaction()
 
     const setScheduleStatusInstruction = VaultInstructionService.setScheduleStatus(
-        payerAccount.publicKey,
-        vaultAddress,
-        scheduleAddress,
-        isActive,
+      payerAccount.publicKey,
+      vaultAddress,
+      scheduleAddress,
+      isActive,
       vaultProgramId,
     )
     transaction.add(setScheduleStatusInstruction)
@@ -600,7 +600,7 @@ export class VaultService {
     vaultProgramId: PublicKey,
   ): [PublicKey, number] {
     const derivationPath = (typeof(params) === 'string')
-        ? this.findVaultDerivationPath(params)
+      ? this.findVaultDerivationPath(params)
       : params
     return VaultInstructionService.findVaultAddress(
       derivationPath,

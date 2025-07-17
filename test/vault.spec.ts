@@ -80,18 +80,18 @@ describe("Vault", () => {
     const vaultAuthority = vaultInfo.signer;
 
     const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-        connection,
-        payer,
-        vaultAuthority,
-        sendingTokenMint.publicKey
-      );
+      connection,
+      payer,
+      vaultAuthority,
+      sendingTokenMint.publicKey
+    );
 
     const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-        connection,
-        payer,
-        vaultAuthority,
-        receivingTokenMint.publicKey
-      );
+      connection,
+      payer,
+      vaultAuthority,
+      receivingTokenMint.publicKey
+    );
 
     await TokenProgramService.mint(
       connection,
@@ -126,11 +126,11 @@ describe("Vault", () => {
   it("Redeem token", async () => {
     const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-        connection,
-        payer,
-        user.publicKey,
-        receivingTokenMint.publicKey
-      );
+      connection,
+      payer,
+      user.publicKey,
+      receivingTokenMint.publicKey
+    );
 
     await VaultService.redeem(
       connection,
@@ -160,11 +160,11 @@ describe("Vault", () => {
       );
 
     const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-        connection,
-        payer,
-        vaultAuthority,
-        receivingTokenMint.publicKey
-      );
+      connection,
+      payer,
+      vaultAuthority,
+      receivingTokenMint.publicKey
+    );
 
     await TokenProgramService.mint(
       connection,
@@ -209,11 +209,11 @@ describe("Vault", () => {
   it("Redeem token with old version schedule", async () => {
     const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 1).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-        connection,
-        payer,
-        user.publicKey,
-        receivingTokenMint.publicKey
-      );
+      connection,
+      payer,
+      user.publicKey,
+      receivingTokenMint.publicKey
+    );
 
     await VaultService.redeem(
       connection,

@@ -455,7 +455,7 @@ mod coin98_vault {
     vault.new_owner = anchor_lang::system_program::ID; // Set to empty
 
     Ok(())
-    }
+  }
 }
 
 /// Returns true if the user has root priviledge of the vault
@@ -533,27 +533,27 @@ pub fn verify_proof(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving
 
 pub fn verify_proof_multi(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving_token_mint: Pubkey, receiving_amount: u64, sending_amount: u64, proofs: &Vec<[u8; 32]>, schedule: &Schedule) -> Result<()> {
   let redemption_data = match timestamp {
-  Some(timestamp) => { // newer version if timestamp field exists on merkle node
-    let redemption_params = RedemptionMultiParamsV2 {
-      index: index,
-      timestamp,
-      address: *user,
-      receiving_token_mint: receiving_token_mint,
-      receiving_amount: receiving_amount,
-      sending_amount: sending_amount,
-    };
-    redemption_params.try_to_vec().unwrap()
-  },
-  None => { // older version of merkle node
-    let redemption_params = RedemptionMultiParams {
-      index: index,
-      address: *user,
-      receiving_token_mint: receiving_token_mint,
-      receiving_amount: receiving_amount,
-      sending_amount: sending_amount,
-    };
-    redemption_params.try_to_vec().unwrap()
-  }
+    Some(timestamp) => { // newer version if timestamp field exists on merkle node
+      let redemption_params = RedemptionMultiParamsV2 {
+        index: index,
+        timestamp,
+        address: *user,
+        receiving_token_mint: receiving_token_mint,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    },
+    None => { // older version of merkle node
+      let redemption_params = RedemptionMultiParams {
+        index: index,
+        address: *user,
+        receiving_token_mint: receiving_token_mint,
+        receiving_amount: receiving_amount,
+        sending_amount: sending_amount,
+      };
+      redemption_params.try_to_vec().unwrap()
+    }
   };
 
   let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
