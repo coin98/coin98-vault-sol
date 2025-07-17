@@ -30,7 +30,7 @@ pub struct Schedule {
 
 impl Schedule {
   pub fn size(user_count: u16) -> usize {
-      1 + 1 + 8 + 32 + 8 + 36 + 32 + 32 + 32 + 32 + 1 + (4 + usize::from(user_count))
+    1 + 1 + 8 + 32 + 8 + 36 + 32 + 32 + 32 + 32 + 1 + (4 + usize::from(user_count))
   }
 }
 
@@ -45,7 +45,7 @@ pub struct Vault {
 
 impl Vault {
   pub fn size() -> usize {
-      1 + 1 + 32 + 32 + (4 + 32 * 16)
+    1 + 1 + 32 + 32 + (4 + 32 * 16)
   }
 }
 

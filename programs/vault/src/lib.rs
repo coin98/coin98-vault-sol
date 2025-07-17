@@ -8,9 +8,9 @@ pub mod state;
 use anchor_lang::prelude::*;
 use anchor_spl::token::ID as TOKEN_PROGRAM_ID;
 use solana_program::{
-    keccak::hash,
-    program_pack::Pack,
-    system_program::ID as SYSTEM_PROGRAM_ID
+  keccak::hash,
+  program_pack::Pack,
+  system_program::ID as SYSTEM_PROGRAM_ID
 };
 use std::convert::TryInto;
 
@@ -21,14 +21,14 @@ use crate::external::anchor_spl_system::transfer_lamport;
 use crate::external::anchor_spl_token::transfer_token;
 use crate::external::spl_token::TokenAccount;
 use crate::state::{
-    ObjType,
-    RedemptionMultiParams,
-    Schedule,
-    Vault,
+  ObjType,
+  RedemptionMultiParams,
+  Schedule,
+  Vault,
 };
 use crate::{
-    constant::{SIGNER_SEED_1},
-    state::{RedemptionMultiParamsV2, RedemptionNFTParams, RedemptionParams, RedemptionParamsV2},
+  constant::{SIGNER_SEED_1},
+  state::{RedemptionMultiParamsV2, RedemptionNFTParams, RedemptionParams, RedemptionParamsV2},
 };
 
 declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
@@ -93,15 +93,15 @@ mod coin98_vault {
     let schedule = &mut ctx.accounts.schedule;
 
     if schedule_type == 0 {
-        schedule.obj_type = ObjType::Distribution;
+      schedule.obj_type = ObjType::Distribution;
     } else if schedule_type == 1 {
-        schedule.obj_type = ObjType::DistributionMulti;
+      schedule.obj_type = ObjType::DistributionMulti;
     } else if schedule_type == 2 {
-        schedule.obj_type = ObjType::NFTDistribution;
+      schedule.obj_type = ObjType::NFTDistribution;
     } else if schedule_type == 3 {
-        schedule.obj_type = ObjType::NFTCollectionDistribution;
+      schedule.obj_type = ObjType::NFTCollectionDistribution;
     } else {
-        return Err(ErrorCode::InvalidScheduleType.into());
+      return Err(ErrorCode::InvalidScheduleType.into());
     }
     schedule.nonce = ctx.bumps.schedule;
     schedule.event_id = event_id;
@@ -477,12 +477,12 @@ pub fn verify_new_owner(user: &Pubkey, vault: &Vault) -> Result<()> {
 /// Returns true if the user is an admin of a specified vault
 pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
   if *user == vault.owner {
-      return Ok(());
+    return Ok(());
   }
 
   let result = vault.admins.iter().position(|&key| key == *user);
   if result == None {
-      return Err(ErrorCode::Unauthorized.into());
+    return Err(ErrorCode::Unauthorized.into());
   }
 
   Ok(())
@@ -535,12 +535,12 @@ pub fn verify_proof_multi(index: u16, timestamp: Option<i64>, user: &Pubkey, rec
   let redemption_data = match timestamp {
   Some(timestamp) => { // newer version if timestamp field exists on merkle node
     let redemption_params = RedemptionMultiParamsV2 {
-        index: index,
-        timestamp,
-        address: *user,
-        receiving_token_mint: receiving_token_mint,
-        receiving_amount: receiving_amount,
-        sending_amount: sending_amount,
+      index: index,
+      timestamp,
+      address: *user,
+      receiving_token_mint: receiving_token_mint,
+      receiving_amount: receiving_amount,
+      sending_amount: sending_amount,
     };
     redemption_params.try_to_vec().unwrap()
   },
@@ -672,7 +672,7 @@ pub fn verify_nft_ownership_and_collection(
   // Verify the NFT belongs to the expected collection
   if let Some(collection) = metadata.collection {
     if collection.key != *expected_collection {
-        return Err(ErrorCode::InvalidCollection.into());
+      return Err(ErrorCode::InvalidCollection.into());
     }
   } else {
     return Err(ErrorCode::InvalidCollection.into());

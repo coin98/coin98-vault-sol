@@ -33,11 +33,11 @@ pub struct CreateVaultContext<'info> {
     seeds = [
       &VAULT_SEED_1,
       &*vault_path,
-  ],
-  bump,
-  payer = owner,
-  space = 16 + Vault::size(),
-)]
+    ],
+    bump,
+    payer = owner,
+    space = 16 + Vault::size(),
+  )]
   pub vault: Account<'info, Vault>,
 
   pub system_program: Program<'info, System>,
@@ -69,10 +69,10 @@ pub struct CreateScheduleContext<'info> {
     seeds = [
       &SCHEDULE_SEED_1,
       &shared::derive_event_id(event_id).as_ref(),
-  ],
-  bump,
-  payer = admin,
-  space = 16 + Schedule::size(user_count),
+    ],
+    bump,
+    payer = admin,
+    space = 16 + Schedule::size(user_count),
   )]
   pub schedule: Account<'info, Schedule>,
 
