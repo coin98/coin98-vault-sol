@@ -578,7 +578,7 @@ pub fn sending_token<'a>(
   sending_amount: u64,
   receiving_amount: u64,
 ) -> Result<()> {
-  if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
+  if schedule.sending_token_mint != SYSTEM_PROGRAM_ID && sending_amount > 0 {
     let vault_token1 = &accounts[0];
     require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
     let user_token1 = &accounts[1];
@@ -592,14 +592,22 @@ pub fn sending_token<'a>(
     .expect("Coin98Vault: CPI failed.");
   }
 
-  transfer_token(
-    &vault_signer,
-    &vault_token0,
-    &user_token0,
-    receiving_amount,
-    &[&seeds]
-  )
-  .expect("Coin98Vault: CPI failed.");
+  if schedule.receiving_token_mint == SYSTEM_PROGRAM_ID {
+    transfer_lamport(
+      &vault_signer,
+      &user,
+      receiving_amount,
+      &[&seeds]
+    ).expect("Coin98Vault: CPI failed.");
+  } else {
+    transfer_token(
+      &vault_signer,
+      &vault_token0,
+      &user_token0,
+      receiving_amount,
+      &[&seeds]
+    ).expect("Coin98Vault: CPI failed.");
+  }
 
   Ok(())
 }

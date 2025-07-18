@@ -180,6 +180,7 @@ pub struct RedeemTokenContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -208,6 +209,8 @@ pub struct RedeemTokenContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -229,6 +232,7 @@ pub struct RedeemTokenMultiContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -254,6 +258,8 @@ pub struct RedeemTokenMultiContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -288,6 +294,7 @@ pub struct RedeemTokenNFTContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -330,6 +337,8 @@ pub struct RedeemTokenNFTContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -364,6 +373,7 @@ pub struct RedeemTokenNFTCollectionContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -406,6 +416,8 @@ pub struct RedeemTokenNFTCollectionContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]

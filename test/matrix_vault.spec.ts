@@ -710,4 +710,123 @@ describe("Vault for specific NFT", () => {
       PROGRAM_ID
     );
   })
+
+  it("Create schedule for native token", async () => {
+    tree = MerkleDistributionNftService.createTree([
+      {
+        redeemType: "collection",
+        index: 0,
+        timestamp: new BN(snapshot),
+        nftMint: SystemProgram.programId,
+        collectionMint: collectionMint.publicKey,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      },
+      {
+        redeemType: "collection",
+        index: 1,
+        timestamp: new BN(snapshot),
+        nftMint: SystemProgram.programId,
+        collectionMint: collectionMint.publicKey,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      },
+    ]);
+
+    const vaultInfo = await VaultService.getVaultAccountInfo(
+      connection,
+      vaultAddress
+    );
+
+    const vaultAuthority = vaultInfo.signer;
+
+    const vaultSendTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        vaultAuthority,
+        sendingTokenMint.publicKey
+      );
+
+    const vaultReceiveTokenAccount =
+      await TokenProgramService.createAssociatedTokenAccount(
+        connection,
+        root,
+        vaultAuthority,
+        receivingTokenMint.publicKey
+      );
+
+    // Sending lamport to vault receive token account
+    await connection.requestAirdrop(
+      vaultAuthority,
+      LAMPORTS_PER_SOL
+    );
+
+    eventId = new BN(Math.random() * 1000000);
+
+    scheduleAddress = await VaultService.createSchedule(
+      connection,
+      root,
+      vaultAddress,
+      2,
+      eventId,
+      new BN(0),
+      tree.root().hash,
+      new BN(3),
+      SystemProgram.programId,
+      vaultReceiveTokenAccount,
+      sendingTokenMint.publicKey,
+      vaultSendTokenAccount,
+      PROGRAM_ID
+    );
+    console.log("Schedule Address: ", scheduleAddress.toBase58());
+
+    const scheduleInfo = await VaultService.getScheduleAccountInfo(
+      connection,
+      scheduleAddress
+    );
+    expect(scheduleInfo.vaultId.toBase58()).to.equal(vaultAddress.toBase58());
+  })
+
+  it("Claim native token ID 0", async () => {
+    const proofs = MerkleDistributionNftService.getProof(tree, 0).map(
+      (p) => p.hash
+    );
+
+    const [isRedeemedAddress, _] = VaultService.findRedeemIndexAddress(
+      eventId,
+      0,
+      nftMints[0],
+      PROGRAM_ID
+    );
+
+    await VaultService.initRedeemIndex(
+      connection,
+      user2,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      0,
+      nftMints[0],
+      PROGRAM_ID
+    );
+
+    const tx = await VaultService.redeemNFTCollection(
+      connection,
+      user2,
+      vaultAddress,
+      scheduleAddress,
+      isRedeemedAddress,
+      0,
+      new BN(snapshot),
+      nftMints[0],
+      collectionMint.publicKey,
+      new BN(100),
+      new BN(0),
+      proofs,
+      user2.publicKey,
+      user2.publicKey,
+      PROGRAM_ID
+    );
+  });
 });

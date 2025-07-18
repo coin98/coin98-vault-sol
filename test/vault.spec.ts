@@ -1,4 +1,4 @@
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import { SolanaConfigService, TestAccountService } from "@coin98/solana-support-library/config";
 import { VaultService } from "../services/vault.service";
 import { expect } from "chai";
@@ -220,6 +220,89 @@ describe("Vault", () => {
       user,
       vaultAddress,
       oldVersionScheduleAddress,
+      1,
+      new BN(snapshot),
+      proofs,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Create vault native token", async () => {
+    tree = MerkleDistributionService.createTree([
+      {
+        index: 0,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        sendingAmount: new BN(0),
+        receivingAmount: new BN(100)
+      },
+      {
+        index: 1,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        sendingAmount: new BN(0),
+        receivingAmount: new BN(100)
+      }
+    ]);
+
+
+    const vaultInfo = await VaultService.getVaultAccountInfo(connection, vaultAddress);
+    const vaultAuthority = vaultInfo.signer;
+
+    const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      sendingTokenMint.publicKey
+    );
+
+    const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      receivingTokenMint.publicKey
+    );
+
+    await connection.requestAirdrop(
+      vaultAuthority,
+      LAMPORTS_PER_SOL // Airdrop 1 SOL to the vault receive token account
+    );
+
+    scheduleAddress = await VaultService.createSchedule(
+      connection,
+      payer,
+      vaultAddress,
+      3,
+      new BN(Math.random() * 1000000),
+      new BN(0),
+      tree.root().hash,
+      new BN(0),
+      SystemProgram.programId,
+      vaultReceiveTokenAccount,
+      sendingTokenMint.publicKey,
+      vaultSendTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Redeem native token", async () => {
+    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      user.publicKey,
+      receivingTokenMint.publicKey
+    );
+
+    await VaultService.redeem(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
       1,
       new BN(snapshot),
       proofs,

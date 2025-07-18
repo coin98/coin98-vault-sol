@@ -357,6 +357,7 @@ export class VaultInstructionService {
       { pubkey: userAddress, isSigner: true, isWritable: false },
       { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ...extraAccounts
     ]
 
@@ -407,6 +408,8 @@ export class VaultInstructionService {
       { pubkey: userAddress, isSigner: true, isWritable: false },
       { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ...extraAccounts,
     ]
 
     return new TransactionInstruction({
@@ -467,13 +470,14 @@ export class VaultInstructionService {
     const keys: AccountMeta[] = [
       { pubkey: vaultAddress, isSigner: false, isWritable: false },
       { pubkey: scheduleAddress, isSigner: false, isWritable: true },
-      { pubkey: vaultSignerAddress, isSigner: false, isWritable: false },
+      { pubkey: vaultSignerAddress, isSigner: false, isWritable: true },
       { pubkey: vaultVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: userAddress, isSigner: true, isWritable: false },
       { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: userNFTTokenAddress, isSigner: false, isWritable: true },
       { pubkey: nftMetadataAddress, isSigner: false, isWritable: true },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ...extraAccounts,
     ];
 
@@ -536,13 +540,14 @@ export class VaultInstructionService {
       { pubkey: vaultAddress, isSigner: false, isWritable: false },
       { pubkey: scheduleAddress, isSigner: false, isWritable: true },
       { pubkey: redeemIndexAddress, isSigner: false, isWritable: true },
-      { pubkey: vaultSignerAddress, isSigner: false, isWritable: false },
+      { pubkey: vaultSignerAddress, isSigner: false, isWritable: true },
       { pubkey: vaultVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: userAddress, isSigner: true, isWritable: false },
       { pubkey: userVestingTokenAddress, isSigner: false, isWritable: true },
       { pubkey: userNFTTokenAddress, isSigner: false, isWritable: true },
       { pubkey: nftMetadataAddress, isSigner: false, isWritable: true },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ...extraAccounts,
     ];
 
@@ -566,6 +571,7 @@ export class VaultInstructionService {
       index,
       nftMint,
     };
+    console.log("Init Redeem Index Request: ", request);
     const data = coder.instruction.encode("initRedeemIndex", request);
 
     const keys: AccountMeta[] = [
