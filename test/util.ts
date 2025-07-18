@@ -1,8 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
 import {
   TransactionLog,
-} from "@coin98/solana-support-library";
+} from "../solana-support-library";
 import { expect } from "chai";
 import { PROGRAM_ADDRESS } from "@metaplex-foundation/mpl-token-metadata";
 

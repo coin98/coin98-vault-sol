@@ -2,7 +2,7 @@ import {
   HashService,
   sendTransaction,
   TokenProgramService,
-} from "@coin98/solana-support-library";
+} from "../solana-support-library";
 import {
   ComputeBudgetProgram,
   Connection,

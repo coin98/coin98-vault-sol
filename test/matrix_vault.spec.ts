@@ -1,4 +1,4 @@
-import { SolanaConfigService } from "@coin98/solana-support-library/config";
+import { SolanaConfigService, TokenProgramService, MerkleTree, } from "../solana-support-library";
 import {
   mintNft,
   updateMetadata,
@@ -28,10 +28,6 @@ import {
 } from "./util";
 import { expect } from "chai";
 import { VaultService } from "../services";
-import {
-  MerkleTree,
-  TokenProgramService,
-} from "@coin98/solana-support-library";
 import { MerkleDistributionNftService } from "../services/merkle_distributor.service";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");

@@ -1,8 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import * as borsh from '@project-serum/borsh';
 import BN from "bn.js";
-import { HashService } from "@coin98/solana-support-library";
-import { MerkleNode, MerkleTree } from "@coin98/solana-support-library";
+import { HashService, MerkleNode, MerkleTree } from "../solana-support-library";
 
 const LEVEL_ARRAY = [
   "A",

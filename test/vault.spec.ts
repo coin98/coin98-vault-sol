@@ -1,12 +1,11 @@
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
-import { SolanaConfigService, TestAccountService } from "@coin98/solana-support-library/config";
+import { SolanaConfigService, TestAccountService, MerkleTree, TokenProgramService } from "../solana-support-library";
 import { VaultService } from "../services/vault.service";
 import { expect } from "chai";
 import { BN } from "bn.js";
 import "./util";
 import { currentTime } from "./util";
 import { MerkleDistributionService, OldMerkleDistributionService } from "../services/merkle_distributor.service";
-import { MerkleTree, TokenProgramService } from "@coin98/solana-support-library";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
 const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");

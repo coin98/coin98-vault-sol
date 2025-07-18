@@ -25,7 +25,6 @@
   },
   "homepage": "https://github.com/coin98/coin98-vault#readme",
   "dependencies": {
-    "@coin98/solana-support-library": "^0.6.0",
     "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
     "@metaplex-foundation/umi": "^1.2.0",
     "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
@@ -41,7 +40,10 @@
     "@types/mocha": "^9.1.1",
     "@types/node": "^24.0.13",
     "chai": "^4.3.6",
+    "crypto-js": "^4.2.0",
+    "keccak": "^3.0.4",
     "mocha": "^10.0.0",
+    "mz": "^2.7.0",
     "standard-version": "^9.5.0",
     "ts-mocha": "^10.0.0",
     "typescript": "^4.3.5"

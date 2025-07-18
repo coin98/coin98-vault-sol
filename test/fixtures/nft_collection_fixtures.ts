@@ -15,7 +15,7 @@ import {
   sendTransaction,
   TransactionLog,
   sendTransaction2,
-} from "@coin98/solana-support-library";
+} from "../../solana-support-library";
 import { createTransferCheckedInstruction } from "@solana/spl-token";
 import BN from "bn.js";
 import {

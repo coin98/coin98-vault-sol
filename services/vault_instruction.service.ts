@@ -2,7 +2,7 @@ import {
   BorshService,
   HashService,
   TOKEN_PROGRAM_ID,
-} from "@coin98/solana-support-library";
+} from "../solana-support-library";
 import { BorshCoder, Idl } from "@project-serum/anchor";
 import * as borsh from "@project-serum/borsh";
 import {
@@ -571,7 +571,7 @@ export class VaultInstructionService {
       index,
       nftMint,
     };
-    console.log("Init Redeem Index Request: ", request);
+
     const data = coder.instruction.encode("initRedeemIndex", request);
 
     const keys: AccountMeta[] = [
