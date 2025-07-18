@@ -237,7 +237,7 @@
         },
         {
           "name": "vaultSigner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -311,7 +311,7 @@
         },
         {
           "name": "vaultSigner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -389,7 +389,7 @@
         },
         {
           "name": "vaultSigner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {

@@ -16,6 +16,8 @@ mpl-token-metadata = "4.1.2"
 [features]
 cpi = ["no-entrypoint"]
 default = []
+devnet = []
+mainnet = []
 no-entrypoint = []
 no-idl = []
 
