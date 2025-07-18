@@ -1,0 +1,1048 @@
+{
+  "version": "1.2.5",
+  "name": "coin98_vault",
+  "instructions": [
+    {
+      "name": "createVault",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "vaultPath",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "setVault",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "admins",
+          "type": {
+            "vec": "publicKey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createSchedule",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userCount",
+          "type": "u16"
+        },
+        {
+          "name": "eventId",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "merkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "scheduleType",
+          "type": "u8"
+        },
+        {
+          "name": "receivingTokenMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingTokenAccount",
+          "type": "publicKey"
+        },
+        {
+          "name": "sendingTokenMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "sendingTokenAccount",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "setScheduleStatus",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "isActive",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "withdrawSol",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "recipient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdrawToken",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "sender",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "recipient",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeemToken",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeemTokenMulti",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "receivingTokenMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeemTokenNft",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadataAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "nftCollection",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "redeemTokenNftCollection",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "redeemIndex",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadataAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "nftCollection",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initRedeemIndex",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "redeemIndex",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "transferOwnership",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "newOwner",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "acceptOwnership",
+      "accounts": [
+        {
+          "name": "newOwner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Schedule",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "objType",
+            "type": {
+              "defined": "ObjType"
+            }
+          },
+          {
+            "name": "nonce",
+            "type": "u8"
+          },
+          {
+            "name": "eventId",
+            "type": "u64"
+          },
+          {
+            "name": "vaultId",
+            "type": "publicKey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "merkleRoot",
+            "type": "bytes"
+          },
+          {
+            "name": "receivingTokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "sendingTokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "sendingTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "redemptions",
+            "type": {
+              "vec": "bool"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "objType",
+            "type": {
+              "defined": "ObjType"
+            }
+          },
+          {
+            "name": "signerNonce",
+            "type": "u8"
+          },
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "newOwner",
+            "type": "publicKey"
+          },
+          {
+            "name": "admins",
+            "type": {
+              "vec": "publicKey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionIndex",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "isRedeemed",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "TransferTokenParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "instruction",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DeriveEventIdParam",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "eventId",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionParamsV2",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionMultiParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingTokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionMultiParamsV2",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingTokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionNFTParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "redeemType",
+            "type": "string"
+          },
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "nftMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "collectionMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountState",
+      "docs": [
+        "Account state."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "Initialized"
+          },
+          {
+            "name": "Frozen"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ObjType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "Distribution"
+          },
+          {
+            "name": "DistributionMulti"
+          },
+          {
+            "name": "NFTDistribution"
+          },
+          {
+            "name": "NFTCollectionDistribution"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAccount",
+      "msg": "Coin98Vault: Invalid account"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidInput",
+      "msg": "Coin98Vault: Invalid input"
+    },
+    {
+      "code": 6002,
+      "name": "Redeemed",
+      "msg": "Coin98Vault: Redeemed."
+    },
+    {
+      "code": 6003,
+      "name": "ScheduleLocked",
+      "msg": "Coin98Vault: Schedule locked."
+    },
+    {
+      "code": 6004,
+      "name": "ScheduleUnavailable",
+      "msg": "Coin98Vault: Schedule unavailable."
+    },
+    {
+      "code": 6005,
+      "name": "Unauthorized",
+      "msg": "Coin98Vault: Unauthorized."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidScheduleType",
+      "msg": "Coin98Vault: Invalid schedule type."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidMintAccount",
+      "msg": "Coin98Vault: Invalid mint account"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidTokenAmount",
+      "msg": "Coin98Vault: Invalid token amount"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidMetadata",
+      "msg": "Coin98Vault: Invalid metadata"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidCollection",
+      "msg": "Coin98Vault: NFT collection mismatch."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidProof",
+      "msg": "Coin98Vault: Invalid proof"
+    },
+    {
+      "code": 6012,
+      "name": "WrongScheduleObjectType",
+      "msg": "Coin98Vault: Wrong schedule object type"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidVault",
+      "msg": "Coin98Vault: Wrong vault Id"
+    },
+    {
+      "code": 6014,
+      "name": "SendingTokenFailed",
+      "msg": "Coin98Vault: Sending token failed"
+    }
+  ]
+}
