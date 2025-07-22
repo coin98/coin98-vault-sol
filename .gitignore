@@ -4,7 +4,10 @@
 /Cargo.lock
 /node_modules
 /package-lock.json
-/target
+target/*
 /typechain-types
 /yarn-error.log
 /yarn.lock
+/bun.lock
+/test-ledger
+!target/idl

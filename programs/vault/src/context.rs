@@ -206,6 +206,8 @@ pub struct RedeemTokenContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -252,6 +254,8 @@ pub struct RedeemTokenMultiContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
