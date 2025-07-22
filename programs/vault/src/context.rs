@@ -172,7 +172,6 @@ pub struct RedeemTokenContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::Distribution @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 
@@ -223,7 +222,6 @@ pub struct RedeemTokenMultiContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::DistributionMulti @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 
