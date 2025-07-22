@@ -44,6 +44,13 @@ use crate::external::spl_token::{
   TokenAccount,
 };
 
+#[cfg(feature = "mainnet")]
+declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+
+#[cfg(feature = "devnet")]
+declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
+
+#[cfg(all(not(feature = "mainnet"), not(feature = "devnet")))]
 declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 
 #[program]
