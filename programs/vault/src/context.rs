@@ -173,8 +173,7 @@ pub struct RedeemTokenContext<'info> {
       &shared::derive_event_id(schedule.event_id).as_ref(),
     ],
     bump = schedule.nonce,
-    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
-    constraint = schedule.obj_type == ObjType::Distribution @ErrorCode::WrongScheduleObjectType,
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 
@@ -225,8 +224,7 @@ pub struct RedeemTokenMultiContext<'info> {
       &shared::derive_event_id(schedule.event_id).as_ref(),
     ],
     bump = schedule.nonce,
-    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
-    constraint = schedule.obj_type == ObjType::DistributionMulti @ErrorCode::WrongScheduleObjectType,
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 

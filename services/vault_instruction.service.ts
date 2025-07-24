@@ -74,6 +74,7 @@ interface RedeemTokenRequest {
 
 interface RedeemTokenMultiRequest {
   index: number
+  timestamp: BN
   proofs: Buffer[]
   receivingTokenMint: PublicKey
   receivingAmount: BN
@@ -371,8 +372,9 @@ export class VaultInstructionService {
     vaultAddress: PublicKey,
     scheduleAddress: PublicKey,
     index: number,
+    timestamp: BN,
     proofs: Buffer[],
-    receivingTokenMintAddress: PublicKey,
+    receivingTokenMint: PublicKey,
     receivingAmount: BN,
     sendingAmount: BN,
     vaultSignerAddress: PublicKey,
@@ -386,8 +388,9 @@ export class VaultInstructionService {
 
     const request: RedeemTokenMultiRequest = {
       index,
+      timestamp,
       proofs,
-      receivingTokenMint: receivingTokenMintAddress,
+      receivingTokenMint,
       receivingAmount,
       sendingAmount,
     }

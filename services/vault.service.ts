@@ -498,6 +498,58 @@ export class VaultService {
     console.info(`Initialized redeem index ${index} for NFT ${nftMint.toBase58()} in vault ${vaultAddress.toBase58()}`, '---', txSign, '\n');
   }
 
+  static async redeemTokenMulti(
+    connection: Connection,
+    payerAccount: Keypair,
+    vaultAddress: PublicKey,
+    scheduleAddress: PublicKey,
+    index: number,
+    timestamp: BN,
+    proofs: Buffer[],
+    receivingTokenMint: PublicKey,
+    receivingAmount: BN,
+    sendingAmount: BN,
+    recipientAddress: PublicKey,
+    feePaymentAddress: PublicKey,
+    vaultProgramId: PublicKey,
+  ): Promise<void> {
+
+    const vault = await this.getVaultAccountInfo(
+      connection,
+      vaultAddress,
+    )
+    const schedule = await this.getScheduleAccountInfo(
+      connection,
+      scheduleAddress,
+    )
+
+    const transaction = new Transaction()
+
+    const redeemInstruction = VaultInstructionService.redeemTokenMulti(
+      vaultAddress,
+      scheduleAddress,
+      index,
+      timestamp,
+      proofs,
+      receivingTokenMint,
+      receivingAmount,
+      sendingAmount,
+      vault.signer,
+      schedule.receivingTokenAccount,
+      schedule.sendingTokenAccount,
+      payerAccount.publicKey,
+      recipientAddress,
+      feePaymentAddress,
+      vaultProgramId
+    )
+    transaction.add(redeemInstruction)
+
+    const txSign = await sendTransaction(connection, transaction, [
+      payerAccount,
+    ])
+    console.info(`Redeemed multi-token for user ${payerAccount.publicKey.toBase58()} in schedule ${scheduleAddress.toBase58()}`, '---', txSign, '\n')
+  }
+
   static async transferOwnership(
     connection: Connection,
     payerAccount: Keypair,

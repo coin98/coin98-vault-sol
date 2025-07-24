@@ -31,6 +31,13 @@ use crate::{
   state::{RedemptionMultiParamsV2, RedemptionNFTParams, RedemptionParams, RedemptionParamsV2},
 };
 
+#[cfg(feature = "mainnet")]
+declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+
+#[cfg(feature = "devnet")]
+declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
+
+#[cfg(all(not(feature = "mainnet"), not(feature = "devnet")))]
 declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 
 #[program]
@@ -234,7 +241,7 @@ mod coin98_vault {
     Ok(())
   }
 
-  #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
+  #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::DistributionMulti))]
   pub fn redeem_token_multi<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenMultiContext<'a>>,
     index: u16,
@@ -250,15 +257,9 @@ mod coin98_vault {
     let vault_signer = &ctx.accounts.vault_signer;
     let accounts = &ctx.remaining_accounts;
     let user = &ctx.accounts.user;
-    let vault_token0 = &ctx.accounts.vault_token0;
-    let vault_token0_token_account = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
-    let user_token0 = &ctx.accounts.user_token0;
-    let user_token0_token_account = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
-
-    require_keys_eq!(vault_token0_token_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
-    require_keys_eq!(user_token0_token_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
 
     let schedule = &mut ctx.accounts.schedule;
+
     if schedule.timestamp > 0 {
       require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
       verify_proof_multi(index, None, &ctx.accounts.user.key, receiving_token_mint, receiving_amount, sending_amount, &proofs, schedule)?;
@@ -270,18 +271,49 @@ mod coin98_vault {
     let user_index: usize = index.into();
     schedule.redemptions[user_index] = true;
 
+    if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
+      let vault_token1 = &accounts[0];
+      require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
+      let user_token1 = &accounts[1];
+      transfer_token(
+        &user,
+        &user_token1,
+        &vault_token1,
+        sending_amount,
+        &[]
+      )
+      .expect("Coin98Vault: CPI failed.");
+    }
+
     let seeds: &[&[_]] = &[
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
       &[vault.signer_nonce],
     ];
-    let result = sending_token(schedule, accounts, user, seeds, vault_signer, vault_token0, user_token0, sending_amount, receiving_amount);
+        if receiving_token_mint == SYSTEM_PROGRAM_ID {
+      transfer_lamport(
+        &vault_signer,
+        &user,
+        receiving_amount,
+        &[&seeds]
+      ).expect("Coin98Vault: CPI failed.");
+    } else {
+      let vault_token0 = &ctx.accounts.vault_token0;
+      let vault_token0_account = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
+      let user_token0 = &ctx.accounts.user_token0;
+      let user_token0_account = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
 
-    // Verify the result of sending token
-    if result.is_err() {
-      return Err(ErrorCode::SendingTokenFailed.into());
+      require_keys_eq!(vault_token0_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+      require_keys_eq!(user_token0_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+
+      transfer_token(
+        &vault_signer,
+        &vault_token0,
+        &user_token0,
+        receiving_amount,
+        &[&seeds]
+      ).expect("Coin98Vault: CPI failed.");
     }
-
     Ok(())
   }
 
