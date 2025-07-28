@@ -23,15 +23,15 @@ export interface Schedule {
   index: number;
   timestamp: BN;
   address: PublicKey;
-  sendingAmount: BN;
   receivingAmount: BN;
+  sendingAmount: BN;
 }
 
 export interface OldVersionSchedule {
   index: number;
   address: PublicKey;
-  sendingAmount: BN;
   receivingAmount: BN;
+  sendingAmount: BN;
 }
 
 export interface ScheduleNft {
@@ -40,6 +40,15 @@ export interface ScheduleNft {
   timestamp: BN;
   nftMint: PublicKey;
   collectionMint: PublicKey;
+  receivingAmount: BN;
+  sendingAmount: BN;
+}
+
+export interface ScheduleMultiToken {
+  index: number;
+  timestamp: BN;
+  address: PublicKey;
+  receivingTokenMint: PublicKey;
   receivingAmount: BN;
   sendingAmount: BN;
 }
@@ -70,15 +79,6 @@ const ScheduleNftLayout: borsh.Layout<ScheduleNft> = borsh.struct([
   borsh.u64("receivingAmount"),
   borsh.u64("sendingAmount"),
 ]);
-
-export interface ScheduleMultiToken {
-  index: number;
-  timestamp: BN;
-  address: PublicKey;
-  receivingTokenMint: PublicKey;
-  receivingAmount: BN;
-  sendingAmount: BN;
-}
 
 const ScheduleMultiTokenLayout: borsh.Layout<ScheduleMultiToken> = borsh.struct([
   borsh.u16('index'),

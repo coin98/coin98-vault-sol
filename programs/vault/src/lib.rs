@@ -555,7 +555,7 @@ pub fn verify_proof(index: u16, timestamp: Option<i64>, user: &Pubkey, receiving
   let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
   let leaf = hash(&redemption_data[..]);
   let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
-  require!(is_valid_proof, ErrorCode::Unauthorized);
+  require!(is_valid_proof, ErrorCode::InvalidProof);
 
   let user_index: usize = index.into();
   require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);
@@ -591,7 +591,7 @@ pub fn verify_proof_multi(index: u16, timestamp: Option<i64>, user: &Pubkey, rec
   let root: [u8; 32] = schedule.merkle_root.clone().try_into().unwrap();
   let leaf = hash(&redemption_data[..]);
   let is_valid_proof = shared::verify_proof(proofs.to_vec(), root, leaf.to_bytes());
-  require!(is_valid_proof, ErrorCode::Unauthorized);
+  require!(is_valid_proof, ErrorCode::InvalidProof);
 
   let user_index: usize = index.into();
   require!(schedule.redemptions[user_index] == false, ErrorCode::Redeemed);

@@ -73,15 +73,15 @@ describe("Vault", () => {
         index: 0,
         timestamp: new BN(snapshot),
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       },
       {
         index: 1,
         timestamp: new BN(snapshot),
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       }
     ]);
 
@@ -107,7 +107,7 @@ describe("Vault", () => {
       payer,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
-      new BN(100)
+      new BN(200)
     );
 
     scheduleAddress = await VaultService.createSchedule(
@@ -133,7 +133,7 @@ describe("Vault", () => {
   });
 
   it("Redeem token", async () => {
-    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const proofs = MerkleDistributionService.getProof(tree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -146,9 +146,25 @@ describe("Vault", () => {
       user,
       vaultAddress,
       scheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+
+    const proofs2 = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    await VaultService.redeem(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
+      1,
+      new BN(snapshot),
+      proofs2,
       new BN(100),
       new BN(0),
       userReceiveTokenAccount,
@@ -187,14 +203,14 @@ describe("Vault", () => {
       {
         index: 0,
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       },
       {
         index: 1,
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       }
     ]);
 
@@ -216,7 +232,7 @@ describe("Vault", () => {
   });
 
   it("Redeem token with old version schedule", async () => {
-    const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 1).map(item => item.hash);
+    const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -229,7 +245,7 @@ describe("Vault", () => {
       user,
       vaultAddress,
       oldVersionScheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
       new BN(100),
@@ -295,7 +311,7 @@ describe("Vault", () => {
   });
 
   it("Redeem native token", async () => {
-    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const proofs = MerkleDistributionService.getProof(tree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -308,7 +324,7 @@ describe("Vault", () => {
       user,
       vaultAddress,
       scheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
       new BN(100),
