@@ -172,7 +172,6 @@ pub struct RedeemTokenContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::Distribution @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 
@@ -206,6 +205,8 @@ pub struct RedeemTokenContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -221,7 +222,6 @@ pub struct RedeemTokenMultiContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidAccount,
-    constraint = schedule.obj_type == ObjType::DistributionMulti @ErrorCode::InvalidAccount,
   )]
   pub schedule: Account<'info, Schedule>,
 
@@ -252,6 +252,8 @@ pub struct RedeemTokenMultiContext<'info> {
     constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
   )]
   pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]

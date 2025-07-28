@@ -13,6 +13,7 @@ use solana_program::{
   program_pack::{
     Pack,
   },
+  system_program::ID as SYSTEM_PROGRAM_ID,
 };
 use std::{
   convert::{
@@ -43,7 +44,14 @@ use crate::external::spl_token::{
   TokenAccount,
 };
 
+#[cfg(feature = "mainnet")]
 declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+
+#[cfg(feature = "devnet")]
+declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
+
+#[cfg(all(not(feature = "mainnet"), not(feature = "devnet")))]
+declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 
 #[program]
 mod coin98_vault {
@@ -105,7 +113,7 @@ mod coin98_vault {
     let schedule = &mut ctx.accounts.schedule;
 
     schedule.obj_type = if use_multi_token { ObjType::DistributionMulti } else { ObjType::Distribution };
-    schedule.nonce = *ctx.bumps.get("schedule").unwrap();
+    schedule.nonce = ctx.bumps.schedule;
     schedule.event_id = event_id;
     schedule.vault_id = vault.key();
     schedule.timestamp = timestamp;
@@ -203,6 +211,8 @@ mod coin98_vault {
     let vault_signer = &ctx.accounts.vault_signer;
     let vault_token0 = &ctx.accounts.vault_token0;
     let user_token0 = &ctx.accounts.user_token0;
+    let accounts = &ctx.remaining_accounts;
+    let user = &ctx.accounts.user;
     let clock = Clock::get().unwrap();
 
     let schedule = &mut ctx.accounts.schedule;
@@ -220,8 +230,6 @@ mod coin98_vault {
     schedule.redemptions[user_index] = true;
 
     if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-      let accounts = &ctx.remaining_accounts;
-      let user = &ctx.accounts.user;
       let vault_token1 = &accounts[0];
       require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
       let user_token1 = &accounts[1];
@@ -240,19 +248,28 @@ mod coin98_vault {
       vault.to_account_info().key.as_ref(),
       &[vault.signer_nonce],
     ];
-    transfer_token(
+
+    if schedule.receiving_token_mint == SYSTEM_PROGRAM_ID {
+      transfer_lamport(
+        &vault_signer,
+        &user,
+        receiving_amount,
+        &[&seeds]
+      ).expect("Coin98Vault: CPI failed.");
+    } else {
+      transfer_token(
         &vault_signer,
         &vault_token0,
         &user_token0,
         receiving_amount,
         &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+      ).expect("Coin98Vault: CPI failed.");
+    }
 
     Ok(())
   }
 
-  #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::Distribution))]
+  #[access_control(verify_schedule(&ctx.accounts.schedule, ObjType::DistributionMulti))]
   pub fn redeem_token_multi<'a>(
     ctx: Context<'_, '_, '_, 'a, RedeemTokenMultiContext<'a>>,
     index: u16,
@@ -266,16 +283,11 @@ mod coin98_vault {
 
     let vault = &ctx.accounts.vault;
     let vault_signer = &ctx.accounts.vault_signer;
-
-    let vault_token0 = &ctx.accounts.vault_token0;
-    let vault_token0 = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
-    let user_token0 = &ctx.accounts.user_token0;
-    let user_token0 = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
-
-    require_keys_eq!(vault_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
-    require_keys_eq!(user_token0.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+    let accounts = &ctx.remaining_accounts;
+    let user = &ctx.accounts.user;
 
     let schedule = &mut ctx.accounts.schedule;
+
     if schedule.timestamp > 0 {
       require!(clock.unix_timestamp >= schedule.timestamp, ErrorCode::ScheduleLocked);
       verify_proof_multi(index, None, &ctx.accounts.user.key, receiving_token_mint, receiving_amount, sending_amount, &proofs, schedule)?;
@@ -288,8 +300,6 @@ mod coin98_vault {
     schedule.redemptions[user_index] = true;
 
     if schedule.sending_token_mint != solana_program::system_program::ID && sending_amount > 0 {
-      let accounts = &ctx.remaining_accounts;
-      let user = &ctx.accounts.user;
       let vault_token1 = &accounts[0];
       require_keys_eq!(*vault_token1.key, schedule.sending_token_account, ErrorCode::InvalidAccount);
       let user_token1 = &accounts[1];
@@ -303,21 +313,36 @@ mod coin98_vault {
         .expect("Coin98Vault: CPI failed.");
     }
 
-    let vault_token0 = &ctx.accounts.vault_token0;
-    let user_token0 = &ctx.accounts.user_token0;
     let seeds: &[&[_]] = &[
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
       &[vault.signer_nonce],
     ];
-    transfer_token(
+
+    if receiving_token_mint == SYSTEM_PROGRAM_ID {
+      transfer_lamport(
+        &vault_signer,
+        &user,
+        receiving_amount,
+        &[&seeds]
+      ).expect("Coin98Vault: CPI failed.");
+    } else {
+      let vault_token0 = &ctx.accounts.vault_token0;
+      let vault_token0_account = TokenAccount::unpack_from_slice(&vault_token0.try_borrow_data().unwrap()).unwrap();
+      let user_token0 = &ctx.accounts.user_token0;
+      let user_token0_account = TokenAccount::unpack_from_slice(&user_token0.try_borrow_data().unwrap()).unwrap();
+
+      require_keys_eq!(vault_token0_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+      require_keys_eq!(user_token0_account.mint, receiving_token_mint, ErrorCode::InvalidAccount);
+
+      transfer_token(
         &vault_signer,
         &vault_token0,
         &user_token0,
         receiving_amount,
         &[&seeds]
-      )
-      .expect("Coin98Vault: CPI failed.");
+      ).expect("Coin98Vault: CPI failed.");
+    }
 
     Ok(())
   }

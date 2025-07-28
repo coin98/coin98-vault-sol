@@ -1,21 +1,22 @@
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import { SolanaConfigService, TestAccountService } from "@coin98/solana-support-library/config";
 import { VaultService } from "../services/vault.service";
 import { expect } from "chai";
 import { BN } from "bn.js";
 import "./util";
 import { currentTime } from "./util";
-import { MerkleDistributionService, OldMerkleDistributionService } from "../services/merkle_distributor.service";
-import { MerkleTree, SolanaService, TokenProgramService } from "@coin98/solana-support-library";
+import { MerkleDistributionService, OldMerkleDistributionService, MerkleDistributionMultiTokenService } from "../services/merkle_distributor.service";
+import { MerkleTree, TokenProgramService } from "@coin98/solana-support-library";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
-const PROGRAM_ID = new PublicKey("CfM6SDyyHxi8C76jT1i74p7znPEL6cLmkgBD8sgf9k1U");
+const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
 
 let payer: Keypair;
 let vaultName: string;
 let vaultAddress: PublicKey;
 let sendingTokenMint: Keypair;
 let receivingTokenMint: Keypair;
+let receivingTokenMint2: Keypair;
 let tree: MerkleTree;
 let scheduleAddress: PublicKey;
 let oldVersionScheduleAddress: PublicKey;
@@ -38,6 +39,15 @@ describe("Vault", () => {
       PROGRAM_ID
     );
     receivingTokenMint = await TokenProgramService.createTokenMint(
+      connection,
+      payer,
+      Keypair.generate(),
+      8,
+      payer.publicKey,
+      PROGRAM_ID
+    );
+
+    receivingTokenMint2 = await TokenProgramService.createTokenMint(
       connection,
       payer,
       Keypair.generate(),
@@ -223,6 +233,189 @@ describe("Vault", () => {
       1,
       new BN(snapshot),
       proofs,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Create native schedule", async () => {
+    tree = MerkleDistributionService.createTree([
+      {
+        index: 0,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        sendingAmount: new BN(0),
+        receivingAmount: new BN(100)
+      },
+      {
+        index: 1,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        sendingAmount: new BN(0),
+        receivingAmount: new BN(100)
+      }
+    ]);
+
+    const vaultInfo = await VaultService.getVaultAccountInfo(connection, vaultAddress);
+    const vaultAuthority = vaultInfo.signer;
+
+    const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      sendingTokenMint.publicKey
+    );
+
+    const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      receivingTokenMint.publicKey
+    );
+
+    await connection.requestAirdrop(vaultAuthority, LAMPORTS_PER_SOL);
+
+    scheduleAddress = await VaultService.createSchedule(
+      connection,
+      payer,
+      vaultAddress,
+      3,
+      new BN(Math.random() * 1000000),
+      new BN(0),
+      tree.root().hash,
+      false,
+      SystemProgram.programId,
+      vaultReceiveTokenAccount,
+      sendingTokenMint.publicKey,
+      vaultSendTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Redeem native token", async () => {
+    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      user.publicKey,
+      receivingTokenMint.publicKey
+    );
+
+    await VaultService.redeem(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
+      1,
+      new BN(snapshot),
+      proofs,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Create redeem multi-token schedule", async () => {
+    tree = MerkleDistributionMultiTokenService.createTree([
+      {
+        index: 0,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        receivingTokenMint: receivingTokenMint.publicKey,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      },
+      {
+        index: 1,
+        timestamp: new BN(snapshot),
+        address: user.publicKey,
+        receivingTokenMint: SystemProgram.programId,
+        receivingAmount: new BN(100),
+        sendingAmount: new BN(0),
+      }
+    ]);
+    const vaultInfo = await VaultService.getVaultAccountInfo(connection, vaultAddress);
+    const vaultAuthority = vaultInfo.signer;
+
+    const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      sendingTokenMint.publicKey
+    );
+
+    const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      vaultAuthority,
+      receivingTokenMint.publicKey
+    );
+
+    await TokenProgramService.mint(
+      connection,
+      payer,
+      receivingTokenMint.publicKey,
+      vaultReceiveTokenAccount,
+      new BN(100)
+    );
+
+    scheduleAddress = await VaultService.createSchedule(
+      connection,
+      payer,
+      vaultAddress,
+      3,
+      new BN(Math.random() * 1000000),
+      new BN(0),
+      tree.root().hash,
+      true,
+      receivingTokenMint.publicKey,
+      vaultReceiveTokenAccount,
+      sendingTokenMint.publicKey,
+      vaultSendTokenAccount,
+      PROGRAM_ID
+    );
+  });
+
+  it("Redeem multi-token", async () => {
+    const proofs = MerkleDistributionMultiTokenService.getProof(tree, 0).map(item => item.hash);
+    const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
+      connection,
+      payer,
+      user.publicKey,
+      receivingTokenMint.publicKey
+    );
+
+    await VaultService.redeemTokenMulti(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
+      0,
+      new BN(snapshot),
+      proofs,
+      receivingTokenMint.publicKey,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+
+    const proofs2 = MerkleDistributionMultiTokenService.getProof(tree, 1).map(item => item.hash);
+    await VaultService.redeemTokenMulti(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
+      1,
+      new BN(snapshot),
+      proofs2,
+      SystemProgram.programId,
       new BN(100),
       new BN(0),
       userReceiveTokenAccount,
