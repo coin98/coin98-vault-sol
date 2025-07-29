@@ -9,7 +9,6 @@ use crate::constant::{
 use crate::error::ErrorCode;
 use crate::external::spl_token::is_token_program;
 use crate::state::{
-  ObjType,
   RedemptionIndex,
   Schedule,
   Vault
@@ -286,7 +285,6 @@ pub struct RedeemTokenNFTContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
-    constraint = schedule.obj_type == ObjType::NFTDistribution @ErrorCode::WrongScheduleObjectType,
   )]
   pub schedule: Account<'info, Schedule>,
 
@@ -353,7 +351,6 @@ pub struct RedeemTokenNFTCollectionContext<'info> {
     ],
     bump = schedule.nonce,
     constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
-    constraint = schedule.obj_type == ObjType::NFTCollectionDistribution @ErrorCode::WrongScheduleObjectType,
   )]
   pub schedule: Account<'info, Schedule>,
 

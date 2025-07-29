@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   ConfirmOptions,
   Connection,

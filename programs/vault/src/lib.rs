@@ -521,7 +521,7 @@ pub fn is_admin(user: &Pubkey, vault: &Vault) -> Result<()> {
 }
 
 pub fn verify_schedule(schedule: &Schedule, expected_type: ObjType) -> Result<()> {
-  require!(schedule.obj_type == expected_type, ErrorCode::InvalidAccount);
+  require!(schedule.obj_type == expected_type, ErrorCode::WrongScheduleObjectType);
   require!(schedule.is_active, ErrorCode::ScheduleUnavailable);
 
   Ok(())
