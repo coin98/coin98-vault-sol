@@ -1,6 +1,7 @@
 import { SolanaConfigService, TokenProgramService, MerkleTree, } from "../solana-support-library";
 import {
   mintNft,
+  ScheduleType,
   updateMetadata,
   verifyCollection,
 } from "./fixtures";
@@ -382,7 +383,7 @@ describe("Vault for specific NFT", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      new BN(2),
+      ScheduleType.MerkleDistributorNft,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -552,7 +553,7 @@ describe("Vault for specific NFT", () => {
       eventId,
       new BN(0),
       tree.root().hash,
-      new BN(3),
+      ScheduleType.MerkleDistributorNftCollection,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -768,7 +769,7 @@ describe("Vault for specific NFT", () => {
       eventId,
       new BN(0),
       tree.root().hash,
-      new BN(3),
+      ScheduleType.MerkleDistributorNftCollection,
       SystemProgram.programId,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,

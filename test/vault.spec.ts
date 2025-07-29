@@ -6,6 +6,7 @@ import { BN } from "bn.js";
 import "./util";
 import { currentTime } from "./util";
 import { MerkleDistributionMultiTokenService, MerkleDistributionService, OldMerkleDistributionService } from "../services/merkle_distributor.service";
+import { ScheduleType } from "./fixtures";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
 const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
@@ -118,7 +119,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      new BN(0),
+      ScheduleType.MerkleDistributor,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -222,7 +223,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(snapshot),
       oldVersionTree.root().hash,
-      new BN(0),
+      ScheduleType.MerkleDistributor,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -301,7 +302,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      new BN(0),
+      ScheduleType.MerkleDistributor,
       SystemProgram.programId,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -387,7 +388,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      new BN(1),
+      ScheduleType.MerkleDistributorMultiToken,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,

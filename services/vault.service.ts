@@ -86,7 +86,7 @@ export class VaultService {
     eventId: BN,
     timestamp: BN,
     merkleRoot: Buffer,
-    scheduleType: BN,
+    scheduleType: number,
     receivingTokenMintAddress: PublicKey,
     receivingTokenAccountAddress: PublicKey,
     sendingTokenMintAddress: PublicKey,
@@ -324,7 +324,7 @@ export class VaultService {
       console.log(`Creating NFT redemption transaction`);
       const transaction = new Transaction();
       transaction.add(
-        ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000_000 })
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })
       );
 
       const redeemInstruction = VaultInstructionService.redeemTokenNFT(
