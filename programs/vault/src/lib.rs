@@ -45,10 +45,10 @@ use crate::external::spl_token::{
 };
 
 #[cfg(feature = "mainnet")]
-declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
+declare_id!("VLT2aFKdnYyseZgjWcW5TNu9gLMCUiRuQNZN5FhK45Q");
 
 #[cfg(feature = "devnet")]
-declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
+declare_id!("VT2uRTAsYJRavhAVcvSjk9TzyNeP1ccA6KUUD5JxeHj");
 
 #[cfg(all(not(feature = "mainnet"), not(feature = "devnet")))]
 declare_id!("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
