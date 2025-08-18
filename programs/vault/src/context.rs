@@ -1,21 +1,22 @@
 use anchor_lang::prelude::*;
 
 use crate::constant::{
+  REDEEM_INDEX_SEED_1,
   SCHEDULE_SEED_1,
   SIGNER_SEED_1,
   VAULT_SEED_1,
 };
-use crate::error::{
-  ErrorCode,
-};
+use crate::error::ErrorCode;
+use crate::external::spl_token::is_token_program;
 use crate::state::{
-  ObjType,
+  RedemptionIndex,
   Schedule,
-  Vault,
+  Vault
 };
-use crate::shared;
-use crate::external::spl_token::{
-  is_token_program,
+use crate::{
+  find_metadata_account,
+  get_associated_token_address,
+  shared
 };
 
 #[derive(Accounts)]
@@ -177,6 +178,7 @@ pub struct RedeemTokenContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -227,6 +229,7 @@ pub struct RedeemTokenMultiContext<'info> {
 
   /// CHECK: PDA to hold vault's assets
   #[account(
+    mut,
     seeds = [
       &SIGNER_SEED_1,
       vault.to_account_info().key.as_ref(),
@@ -260,20 +263,202 @@ pub struct RedeemTokenMultiContext<'info> {
 pub struct TransferOwnershipContext<'info> {
 
   /// CHECK: vault owner, verified using #access_control
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
+  #[account(signer)]
+  pub owner: AccountInfo<'info>,
 
-    #[account(mut)]
-    pub vault: Account<'info, Vault>,
+  #[account(mut)]
+  pub vault: Account<'info, Vault>,
+}
+
+
+#[derive(Accounts)]
+#[instruction(index: u16, timestamp: i64, nft_mint: Pubkey)]
+pub struct RedeemTokenNFTContext<'info> {
+
+  pub vault: Account<'info, Vault>,
+
+  #[account(
+    mut,
+    seeds = [
+      &SCHEDULE_SEED_1,
+      &shared::derive_event_id(schedule.event_id).as_ref(),
+    ],
+    bump = schedule.nonce,
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+  )]
+  pub schedule: Account<'info, Schedule>,
+
+  /// CHECK: PDA to hold vault's assets
+  #[account(
+    mut,
+    seeds = [
+      &SIGNER_SEED_1,
+      vault.to_account_info().key.as_ref(),
+    ],
+    bump = vault.signer_nonce
+  )]
+  pub vault_signer: AccountInfo<'info>,
+
+  /// CHECK: Program's TokenAccount for distribution
+  #[account(
+    mut,
+    constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
+  )]
+  pub vault_token0: AccountInfo<'info>,
+
+  /// CHECK: User account eligible to redeem token. Must sign to provide proof of redemption
+  #[account(signer, mut)]
+  pub user: AccountInfo<'info>,
+
+  /// CHECK: User account to receive token
+  #[account(mut)]
+  pub user_token0: AccountInfo<'info>,
+
+  /// CHECK: User's NFT token account to verify ownership
+  #[account(
+    mut,
+    address = get_associated_token_address(&user.key(), &nft_mint)
+  )]
+  pub user_nft_token_account: AccountInfo<'info>,
+
+  /// CHECK: NFT metadata account for verification
+  #[account(
+    mut,
+    address = find_metadata_account(&nft_mint).0
+  )]
+  pub nft_metadata_account: AccountInfo<'info>,
+
+  /// CHECK: Solana native Token Program
+  #[account(
+    constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
+  )]
+  pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(index: u16, timestamp: i64, nft_mint: Pubkey, nft_collection: Pubkey)]
+pub struct RedeemTokenNFTCollectionContext<'info> {
+
+  pub vault: Account<'info, Vault>,
+
+  #[account(
+    mut,
+    seeds = [
+      &SCHEDULE_SEED_1,
+      &shared::derive_event_id(schedule.event_id).as_ref(),
+    ],
+    bump = schedule.nonce,
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+  )]
+  pub schedule: Account<'info, Schedule>,
+
+  #[account(
+    mut,
+    seeds = [
+      &REDEEM_INDEX_SEED_1,
+      &shared::derive_event_id(schedule.event_id).as_ref(),
+      index.to_le_bytes().as_ref(),
+      nft_mint.as_ref(),
+    ],
+    bump,
+  )]
+  pub redeem_index: Account<'info, RedemptionIndex>,
+
+  /// CHECK: PDA to hold vault's assets
+  #[account(
+    mut,
+    seeds = [
+      &SIGNER_SEED_1,
+      vault.to_account_info().key.as_ref(),
+    ],
+    bump = vault.signer_nonce
+  )]
+  pub vault_signer: AccountInfo<'info>,
+
+  /// CHECK: Program's TokenAccount for distribution
+  #[account(
+    mut,
+    constraint = *vault_token0.key == schedule.receiving_token_account @ErrorCode::InvalidAccount
+  )]
+  pub vault_token0: AccountInfo<'info>,
+
+  /// CHECK: User account eligible to redeem token. Must sign to provide proof of redemption
+  #[account(signer, mut)]
+  pub user: AccountInfo<'info>,
+
+  /// CHECK: User account to receive token
+  #[account(mut)]
+  pub user_token0: AccountInfo<'info>,
+
+  /// CHECK: User's NFT token account to verify ownership
+  #[account(
+    mut,
+    address = get_associated_token_address(&user.key(), &nft_mint)
+  )]
+  pub user_nft_token_account: AccountInfo<'info>,
+
+  /// CHECK: NFT metadata account for verification
+  #[account(
+    mut,
+    address = find_metadata_account(&nft_mint).0
+  )]
+  pub nft_metadata_account: AccountInfo<'info>,
+
+  /// CHECK: Solana native Token Program
+  #[account(
+    constraint = is_token_program(&token_program) @ErrorCode::InvalidAccount
+  )]
+  pub token_program: AccountInfo<'info>,
+
+  pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(_index: u16, _nft_mint: Pubkey)]
+pub struct InitRedeemIndexContext<'info> {
+
+  /// CHECK: vault admin, verified using #access_control
+  #[account(signer, mut)]
+  pub user: AccountInfo<'info>,
+
+  pub vault: Account<'info, Vault>,
+
+  #[account(
+    init,
+    payer = user,
+    seeds = [
+      &REDEEM_INDEX_SEED_1,
+      &shared::derive_event_id(schedule.event_id).as_ref(),
+      _index.to_le_bytes().as_ref(),
+      _nft_mint.as_ref(),
+    ],
+    bump,
+    space = 8 + 1,
+  )]
+  pub redeem_index: Account<'info, RedemptionIndex>,
+
+  #[account(
+    seeds = [
+      &SCHEDULE_SEED_1,
+      &shared::derive_event_id(schedule.event_id).as_ref(),
+    ],
+    bump = schedule.nonce,
+    constraint = schedule.vault_id == vault.key() @ErrorCode::InvalidVault,
+  )]
+  pub schedule: Account<'info, Schedule>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct AcceptOwnershipContext<'info> {
 
   /// CHECK: new vault owner, verified using #access_control
-    #[account(signer)]
-    pub new_owner: AccountInfo<'info>,
+  #[account(signer)]
+  pub new_owner: AccountInfo<'info>,
 
-    #[account(mut)]
-    pub vault: Account<'info, Vault>,
+  #[account(mut)]
+  pub vault: Account<'info, Vault>,
 }

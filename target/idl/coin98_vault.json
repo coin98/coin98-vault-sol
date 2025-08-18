@@ -98,8 +98,8 @@
           }
         },
         {
-          "name": "useMultiToken",
-          "type": "bool"
+          "name": "scheduleType",
+          "type": "u8"
         },
         {
           "name": "receivingTokenMint",
@@ -237,7 +237,7 @@
         },
         {
           "name": "vaultSigner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -311,7 +311,7 @@
         },
         {
           "name": "vaultSigner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -371,6 +371,235 @@
         {
           "name": "sendingAmount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeemTokenNft",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadataAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "nftCollection",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "redeemTokenNftCollection",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "redeemIndex",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSigner",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userToken0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadataAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "nftCollection",
+          "type": "publicKey"
+        },
+        {
+          "name": "receivingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "sendingAmount",
+          "type": "u64"
+        },
+        {
+          "name": "proofs",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initRedeemIndex",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "redeemIndex",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "schedule",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "nftMint",
+          "type": "publicKey"
         }
       ]
     },
@@ -501,6 +730,18 @@
             "type": {
               "vec": "publicKey"
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RedemptionIndex",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "isRedeemed",
+            "type": "bool"
           }
         ]
       }
@@ -648,6 +889,42 @@
       }
     },
     {
+      "name": "RedemptionNFTParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "redeemType",
+            "type": "string"
+          },
+          {
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "nftMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "collectionMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "receivingAmount",
+            "type": "u64"
+          },
+          {
+            "name": "sendingAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "AccountState",
       "docs": [
         "Account state."
@@ -673,13 +950,19 @@
         "kind": "enum",
         "variants": [
           {
+            "name": "Vault"
+          },
+          {
             "name": "Distribution"
           },
           {
             "name": "DistributionMulti"
           },
           {
-            "name": "Vault"
+            "name": "NFTDistribution"
+          },
+          {
+            "name": "NFTCollectionDistribution"
           }
         ]
       }
@@ -715,6 +998,51 @@
       "code": 6005,
       "name": "Unauthorized",
       "msg": "Coin98Vault: Unauthorized."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidScheduleType",
+      "msg": "Coin98Vault: Invalid schedule type."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidMintAccount",
+      "msg": "Coin98Vault: Invalid mint account"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidTokenAmount",
+      "msg": "Coin98Vault: Invalid token amount"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidMetadata",
+      "msg": "Coin98Vault: Invalid metadata"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidCollection",
+      "msg": "Coin98Vault: NFT collection mismatch."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidProof",
+      "msg": "Coin98Vault: Invalid proof"
+    },
+    {
+      "code": 6012,
+      "name": "WrongScheduleObjectType",
+      "msg": "Coin98Vault: Wrong schedule object type"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidVault",
+      "msg": "Coin98Vault: Wrong vault Id"
+    },
+    {
+      "code": 6014,
+      "name": "SendingTokenFailed",
+      "msg": "Coin98Vault: Sending token failed"
     }
   ]
 }

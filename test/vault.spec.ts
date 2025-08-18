@@ -1,12 +1,12 @@
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
-import { SolanaConfigService, TestAccountService } from "@coin98/solana-support-library/config";
+import { SolanaConfigService, TestAccountService, MerkleTree, TokenProgramService } from "../solana-support-library";
 import { VaultService } from "../services/vault.service";
 import { expect } from "chai";
 import { BN } from "bn.js";
 import "./util";
 import { currentTime } from "./util";
-import { MerkleDistributionService, OldMerkleDistributionService, MerkleDistributionMultiTokenService } from "../services/merkle_distributor.service";
-import { MerkleTree, TokenProgramService } from "@coin98/solana-support-library";
+import { MerkleDistributionMultiTokenService, MerkleDistributionService, OldMerkleDistributionService } from "../services/merkle_distributor.service";
+import { ScheduleType } from "./fixtures";
 
 const connection = new Connection("http://127.0.0.1:8899", "confirmed");
 const PROGRAM_ID = new PublicKey("7fCiqPGJdD254RS3iUYFHL1ACtqFX78YXHwYhkbLWpXY");
@@ -74,15 +74,15 @@ describe("Vault", () => {
         index: 0,
         timestamp: new BN(snapshot),
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       },
       {
         index: 1,
         timestamp: new BN(snapshot),
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       }
     ]);
 
@@ -108,7 +108,7 @@ describe("Vault", () => {
       payer,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
-      new BN(100)
+      new BN(200)
     );
 
     scheduleAddress = await VaultService.createSchedule(
@@ -119,7 +119,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      false,
+      ScheduleType.MerkleDistributor,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -134,7 +134,7 @@ describe("Vault", () => {
   });
 
   it("Redeem token", async () => {
-    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const proofs = MerkleDistributionService.getProof(tree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -147,9 +147,25 @@ describe("Vault", () => {
       user,
       vaultAddress,
       scheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
+      new BN(100),
+      new BN(0),
+      userReceiveTokenAccount,
+      userReceiveTokenAccount,
+      PROGRAM_ID
+    );
+
+    const proofs2 = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    await VaultService.redeem(
+      connection,
+      user,
+      vaultAddress,
+      scheduleAddress,
+      1,
+      new BN(snapshot),
+      proofs2,
       new BN(100),
       new BN(0),
       userReceiveTokenAccount,
@@ -163,11 +179,11 @@ describe("Vault", () => {
     const vaultAuthority = vaultInfo.signer;
 
     const vaultSendTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
-      connection,
-      payer,
-      vaultAuthority,
-      sendingTokenMint.publicKey
-    );
+        connection,
+        payer,
+        vaultAuthority,
+        sendingTokenMint.publicKey
+      );
 
     const vaultReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
@@ -188,14 +204,14 @@ describe("Vault", () => {
       {
         index: 0,
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       },
       {
         index: 1,
         address: user.publicKey,
+        receivingAmount: new BN(100),
         sendingAmount: new BN(0),
-        receivingAmount: new BN(100)
       }
     ]);
 
@@ -207,7 +223,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(snapshot),
       oldVersionTree.root().hash,
-      false,
+      ScheduleType.MerkleDistributor,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -217,7 +233,7 @@ describe("Vault", () => {
   });
 
   it("Redeem token with old version schedule", async () => {
-    const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 1).map(item => item.hash);
+    const proofs = OldMerkleDistributionService.getProof(oldVersionTree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -230,7 +246,7 @@ describe("Vault", () => {
       user,
       vaultAddress,
       oldVersionScheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
       new BN(100),
@@ -286,7 +302,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      false,
+      ScheduleType.MerkleDistributor,
       SystemProgram.programId,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,
@@ -296,7 +312,7 @@ describe("Vault", () => {
   });
 
   it("Redeem native token", async () => {
-    const proofs = MerkleDistributionService.getProof(tree, 1).map(item => item.hash);
+    const proofs = MerkleDistributionService.getProof(tree, 0).map(item => item.hash);
     const userReceiveTokenAccount = await TokenProgramService.createAssociatedTokenAccount(
       connection,
       payer,
@@ -309,7 +325,7 @@ describe("Vault", () => {
       user,
       vaultAddress,
       scheduleAddress,
-      1,
+      0,
       new BN(snapshot),
       proofs,
       new BN(100),
@@ -372,7 +388,7 @@ describe("Vault", () => {
       new BN(Math.random() * 1000000),
       new BN(0),
       tree.root().hash,
-      true,
+      ScheduleType.MerkleDistributorMultiToken,
       receivingTokenMint.publicKey,
       vaultReceiveTokenAccount,
       sendingTokenMint.publicKey,

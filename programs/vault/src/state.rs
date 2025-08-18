@@ -3,9 +3,11 @@ use anchor_lang::prelude::*;
 #[repr(u8)]
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
 pub enum ObjType {
+  Vault = 1u8,
   Distribution = 2u8,
   DistributionMulti = 3u8,
-  Vault = 1u8,
+  NFTDistribution = 4u8,
+  NFTCollectionDistribution = 5u8,
 }
 
 #[account]
@@ -47,6 +49,11 @@ impl Vault {
   }
 }
 
+#[account]
+pub struct RedemptionIndex {
+  pub is_redeemed: bool,
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Default)]
 pub struct RedemptionParams {
   pub index: u16,
@@ -79,6 +86,17 @@ pub struct RedemptionMultiParamsV2 {
   pub timestamp: i64,
   pub address: Pubkey,
   pub receiving_token_mint: Pubkey,
+  pub receiving_amount: u64,
+  pub sending_amount: u64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Default)]
+pub struct RedemptionNFTParams {
+  pub redeem_type: String, // "specific" or "collection"
+  pub index: u16,
+  pub timestamp: i64,
+  pub nft_mint: Pubkey,
+  pub collection_mint: Pubkey,
   pub receiving_amount: u64,
   pub sending_amount: u64,
 }

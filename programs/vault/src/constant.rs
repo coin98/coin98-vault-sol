@@ -18,3 +18,5 @@ pub const ROOT_KEYS: &[&str] = &[
 pub const SCHEDULE_SEED_1: &[u8] = &[244, 131, 10, 29, 174, 41, 128, 68];
 pub const SIGNER_SEED_1: &[u8] = &[2, 151, 229, 53, 244, 77, 229, 7];
 pub const VAULT_SEED_1: &[u8] = &[93, 85, 196, 21, 227, 86, 221, 123];
+pub const REDEEM_INDEX_SEED_1: &[u8] = &[40, 50, 66, 226, 94, 178, 166, 127];
+pub const METADATA_SEED_1: &[u8] = &[109, 101, 116, 97, 100, 97, 116, 97];
